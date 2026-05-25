@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 Bridge Panel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#111;--surface:#1c1b19;--surface2:#242320;--border:#333;
+  --text:#cdccca;--muted:#797876;--faint:#5a5957;
+  --primary:#4f98a3;--primary-h:#227f8b;--success:#6daa45;
+  --warn:#bb653b;--error:#d163a7;
+  --r:.5rem;--r-lg:.75rem;--r-xl:1rem;
+}
+body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;font-size:15px;min-height:100vh}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+.brand{display:flex;align-items:center;gap:.75rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.brand svg{flex-shrink:0}
+.brand h1{font-size:1rem;line-height:1.2}
+.brand p{font-size:.7rem;color:var(--muted)}
+.nav{display:grid;gap:.25rem}
+.nav-btn{display:flex;align-items:center;gap:.6rem;padding:.7rem .85rem;border-radius:var(--r-lg);background:transparent;color:var(--muted);border:none;cursor:pointer;text-align:left;font-size:.875rem;transition:.15s}
+.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text)}
+.status-panel{margin-top:auto;padding:.9rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);font-size:.8rem;display:grid;gap:.4rem}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.ok{background:var(--success)}.warn{background:var(--warn)}.err{background:var(--error)}
+.main{padding:1.5rem;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+.topbar{margin-bottom:1.5rem}
+.topbar h2{font-size:1.5rem;line-height:1.1}
+.topbar p{color:var(--muted);font-size:.875rem;margin-top:.3rem;max-width:70ch}
+.cards{display:grid;gap:1rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:1.25rem}
+.card h3{font-size:1rem;margin-bottom:.25rem}
+.card .sub{font-size:.8rem;color:var(--muted);margin-bottom:1rem;max-width:65ch}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.field{display:grid;gap:.3rem}
+.field label{font-size:.8rem;font-weight:700;color:var(--muted)}
+.field input,.field select{min-height:42px;padding:.65rem .9rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:.875rem}
+.field input:focus,.field select:focus{outline:2px solid var(--primary);outline-offset:2px}
+.full{grid-column:1/-1}
+.btn{min-height:42px;padding:.7rem 1.1rem;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:.875rem;transition:.15s}
+.btn:hover{background:#2a2927}
+.btn-primary{background:var(--primary);color:#111;border-color:transparent;font-weight:700}
+.btn-primary:hover{background:var(--primary-h)}
+.btn-danger{background:#3a0a1e;border-color:var(--error);color:var(--error)}
+.btn-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem}
+.kpi{padding:.9rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg)}
+.kpi .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kpi .val{font-size:1.5rem;line-height:1.1;margin-top:.25rem;font-variant-numeric:tabular-nums}
+.list{display:grid;gap:.5rem;margin-top:.75rem}
+.list-row{display:flex;justify-content:space-between;align-items:center;padding:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);gap:1rem}
+.list-row .name{font-size:.875rem}
+.list-row .meta{font-size:.75rem;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:.25rem .6rem;border-radius:9999px;font-size:.7rem;background:#1e3f0a;color:var(--success);border:1px solid #437a22}
+.pill.warn{background:#3a1a0a;color:var(--warn);border-color:var(--warn)}
+.pill.err{background:#3a0a1e;color:var(--error);border-color:var(--error)}
+.feedback{margin-top:.75rem;padding:.65rem .9rem;border-radius:var(--r);font-size:.8rem;display:none}
+.feedback.ok{background:#1e3f0a;border:1px solid #437a22;color:var(--success);display:block}
+.feedback.err{background:#3a0a1e;border:1px solid var(--error);color:var(--error);display:block}
+.mapping{display:grid;gap:.6rem}
+.map-row{display:grid;grid-template-columns:1fr .2fr 1fr auto;gap:.6rem;align-items:center;padding:.75rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg)}
+.map-box{padding:.5rem .75rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);font-size:.8rem}
+.arrow{text-align:center;color:var(--primary);font-weight:900}
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-lg);padding:.9rem;font-family:ui-monospace,monospace;font-size:.75rem;height:320px;overflow-y:auto;line-height:1.7}
+.log-line{color:var(--muted)}
+.log-line.info{color:#4f98a3}
+.log-line.warn{color:var(--warn)}
+.log-line.err{color:var(--error)}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:sticky;top:0;z-index:10}.kpi-row{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.map-row{grid-template-columns:1fr auto}}
+</style>
+</head>
+<body>
+<div class="layout">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" width="38" height="38" fill="none" stroke="#4f98a3" stroke-width="2.2">
+      <rect x="3" y="3" width="34" height="34" rx="8" fill="#1c1b19" stroke="#333"/>
+      <path d="M8 22h7l5-10 5 20 4-10h3"/>
+      <circle cx="8" cy="22" r="2" fill="#4f98a3" stroke="none"/>
+      <circle cx="32" cy="22" r="2" fill="#4f98a3" stroke="none"/>
+    </svg>
+    <div><h1>ESP32 Bridge</h1><p>TUYA + SATEL INTEGRA</p></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showPage('overview',this)">&#x2302; Przegląd</button>
+    <button class="nav-btn" onclick="showPage('network',this)">&#x1F4F6; Sieć</button>
+    <button class="nav-btn" onclick="showPage('tuya',this)">&#x2601; TUYA Cloud</button>
+    <button class="nav-btn" onclick="showPage('satel',this)">&#x1F512; SATEL ETHM-1</button>
+    <button class="nav-btn" onclick="showPage('rules',this)">&#x21C6; Reguły akcji</button>
+    <button class="nav-btn" onclick="showPage('logs',this)">&#x1F4CB; Logi</button>
+  </nav>
+  <div class="status-panel" id="status-panel">
+    <div><span class="dot" id="s-wifi"></span><span id="s-wifi-txt">WiFi: ładowanie…</span></div>
+    <div><span class="dot" id="s-tuya"></span><span id="s-tuya-txt">TUYA: --</span></div>
+    <div><span class="dot" id="s-satel"></span><span id="s-satel-txt">SATEL: --</span></div>
+    <div style="color:var(--faint);font-size:.7rem;margin-top:.3rem" id="s-uptime"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <div class="page active" id="page-overview">
+    <div class="topbar"><h2>Przegląd systemu</h2><p>Stan połączeń i statystyki w czasie rzeczywistym przez SSE.</p></div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">Urządzenia TUYA</div><div class="val" id="k-tuya">--</div></div>
+      <div class="kpi"><div class="lbl">Zmienne SATEL</div><div class="val" id="k-satel">--</div></div>
+      <div class="kpi"><div class="lbl">Reguły aktywne</div><div class="val" id="k-rules">--</div></div>
+      <div class="kpi"><div class="lbl">Wolna pamięć</div><div class="val" id="k-heap">--</div></div>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h3>Akcje szybkie</h3>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="apiTest('tuya')">Test TUYA</button>
+          <button class="btn btn-primary" onclick="apiTest('satel')">Test SATEL</button>
+          <button class="btn" onclick="apiRestart()">Restart urządzenia</button>
+          <button class="btn btn-danger" onclick="apiReset()">Factory Reset</button>
+        </div>
+        <div class="feedback" id="fb-quick"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="page" id="page-network">
+    <div class="topbar"><h2>Konfiguracja sieci</h2><p>WiFi, hostname, DNS, NTP, tryb adresacji.</p></div>
+    <div class="cards">
+      <div class="card">
+        <div class="form-grid" id="net-form">
+          <div class="field"><label>SSID</label><input id="n-ssid"/></div>
+          <div class="field"><label>Hasło WiFi</label><input type="password" id="n-pass" placeholder="(bez zmian)"/></div>
+          <div class="field"><label>Hostname</label><input id="n-host"/></div>
+          <div class="field"><label>Tryb IP</label>
+            <select id="n-dhcp" onchange="toggleStatic()">
+              <option value="true">DHCP</option>
+              <option value="false">Statyczny</option>
+            </select>
+          </div>
+          <div class="field" id="f-sip" style="display:none"><label>Adres IP</label><input id="n-sip"/></div>
+          <div class="field" id="f-sgw" style="display:none"><label>Brama</label><input id="n-sgw"/></div>
+          <div class="field" id="f-snm" style="display:none"><label>Maska</label><input id="n-snm"/></div>
+          <div class="field"><label>DNS 1</label><input id="n-dns1"/></div>
+          <div class="field"><label>DNS 2</label><input id="n-dns2"/></div>
+          <div class="field"><label>NTP</label><input id="n-ntp"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveNet()">Zapisz sieć</button>
+        </div>
+        <div class="feedback" id="fb-net"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TUYA -->
+  <div class="page" id="page-tuya">
+    <div class="topbar"><h2>TUYA Cloud</h2><p>Dane dostępowe do Tuya IoT Platform. Po zapisaniu użyj „Test TUYA" na przeglądzie.</p></div>
+    <div class="cards">
+      <div class="card">
+        <div class="form-grid">
+          <div class="field"><label>Region</label>
+            <select id="t-region">
+              <option value="eu">EU (Europa)</option>
+              <option value="us">US (Ameryka)</option>
+              <option value="cn">CN (Chiny)</option>
+              <option value="in">IN (Indie)</option>
+            </select>
+          </div>
+          <div class="field"><label>Client ID</label><input id="t-cid"/></div>
+          <div class="field"><label>Client Secret</label><input type="password" id="t-secret" placeholder="(bez zmian)"/></div>
+          <div class="field"><label>User UID</label><input id="t-uid"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveTuya()">Zapisz TUYA</button>
+          <button class="btn" onclick="apiTest('tuya')">Test połączenia</button>
+        </div>
+        <div class="feedback" id="fb-tuya"></div>
+      </div>
+      <div class="card">
+        <h3>Odkryte urządzenia</h3>
+        <p class="sub">Lista pobierana po pozytywnym połączeniu z TUYA Cloud.</p>
+        <div class="list" id="tuya-devices">
+          <div style="color:var(--muted);font-size:.8rem">Brak danych — najpierw skonfiguruj i przetestuj połączenie TUYA.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SATEL -->
+  <div class="page" id="page-satel">
+    <div class="topbar"><h2>SATEL ETHM-1 PLUS</h2><p>Połączenie z centralą INTEGRA przez moduł Ethernet.</p></div>
+    <div class="cards">
+      <div class="card">
+        <div class="form-grid">
+          <div class="field"><label>Adres IP modułu</label><input id="sa-host" placeholder="192.168.1.50"/></div>
+          <div class="field"><label>Port</label><input id="sa-port" value="7094"/></div>
+          <div class="field"><label>Hasło integracji</label><input type="password" id="sa-pass" placeholder="(bez zmian)"/></div>
+          <div class="field"><label>ID centrali</label><input id="sa-panel" placeholder="INTEGRA-128"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveSatel()">Zapisz SATEL</button>
+          <button class="btn" onclick="apiTest('satel')">Test połączenia</button>
+        </div>
+        <div class="feedback" id="fb-satel"></div>
+      </div>
+      <div class="card">
+        <h3>Zmienne centrali</h3>
+        <p class="sub">Wejścia, wyjścia, strefy, stany i awarie pobrane po pierwszym połączeniu.</p>
+        <div class="list" id="satel-vars">
+          <div style="color:var(--muted);font-size:.8rem">Brak danych — skonfiguruj i przetestuj SATEL.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RULES -->
+  <div class="page" id="page-rules">
+    <div class="topbar"><h2>Reguły automatyki</h2><p>Dwukierunkowe akcje między TUYA i SATEL. Źródło → warunek → akcja docelowa.</p></div>
+    <div class="cards">
+      <div class="card">
+        <div class="mapping" id="rules-list">
+          <div class="map-row">
+            <div class="map-box"><b>SATEL:</b> Naruszenie wejścia „Czujka salon"</div>
+            <div class="arrow">→</div>
+            <div class="map-box"><b>TUYA:</b> Włącz „Światło salon" 40%</div>
+            <button class="btn">Edytuj</button>
+          </div>
+          <div class="map-row">
+            <div class="map-box"><b>TUYA:</b> Światło wiatrołap = ON</div>
+            <div class="arrow">→</div>
+            <div class="map-box"><b>SATEL:</b> Wyślij komendę → wejście IP 1</div>
+            <button class="btn">Edytuj</button>
+          </div>
+          <div class="map-row">
+            <div class="map-box"><b>SATEL:</b> Uzbrojenie strefy nocnej</div>
+            <div class="arrow">→</div>
+            <div class="map-box"><b>TUYA:</b> Wyłącz grupę „Sypialnia"</div>
+            <button class="btn">Edytuj</button>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary">+ Dodaj regułę</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="page" id="page-logs">
+    <div class="topbar"><h2>Logi zdarzeń</h2><p>Zdarzenia SSE w czasie rzeczywistym z urządzenia.</p></div>
+    <div class="cards">
+      <div class="card">
+        <div class="log-box" id="log-box"></div>
+        <div class="btn-row">
+          <button class="btn" onclick="document.getElementById('log-box').innerHTML=''">Wyczyść</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+<script>
+/* ── Nawigacja ──────────────────────────────────────────────────────────── */
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+/* ── Static helpers ─────────────────────────────────────────────────────── */
+function toggleStatic() {
+  const stat = document.getElementById('n-dhcp').value !== 'true';
+  ['f-sip','f-sgw','f-snm'].forEach(id => {
+    document.getElementById(id).style.display = stat ? 'grid' : 'none';
+  });
+}
+
+function feedback(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'feedback ' + (ok ? 'ok' : 'err');
+}
+
+/* ── Status polling + SSE ───────────────────────────────────────────────── */
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    if (!r.ok) return;
+    const d = await r.json();
+
+    const states = ['Idle','Łączenie…','Połączono','Błąd','AP aktywny'];
+    const wsEl = document.getElementById('s-wifi');
+    wsEl.className = 'dot ' + (d.wifi_state === 2 ? 'ok' : d.wifi_state === 3 ? 'err' : 'warn');
+    document.getElementById('s-wifi-txt').textContent = 'WiFi: ' + (states[d.wifi_state] || '?') + (d.ip !== '0.0.0.0' ? ' (' + d.ip + ')' : '');
+
+    const tuya = document.getElementById('s-tuya');
+    tuya.className = 'dot ' + (d.tuya_ok ? 'ok' : 'err');
+    document.getElementById('s-tuya-txt').textContent = 'TUYA: ' + (d.tuya_ok ? 'OK' : 'Rozłączono');
+
+    const satel = document.getElementById('s-satel');
+    satel.className = 'dot ' + (d.satel_ok ? 'ok' : 'err');
+    document.getElementById('s-satel-txt').textContent = 'SATEL: ' + (d.satel_ok ? 'OK' : 'Rozłączono');
+
+    document.getElementById('k-heap').textContent = Math.round(d.free_heap / 1024) + ' KB';
+    document.getElementById('s-uptime').textContent = 'Uptime: ' + formatUptime(d.uptime_s);
+  } catch(e) {}
+}
+
+function formatUptime(s) {
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+setInterval(pollStatus, 5000);
+pollStatus();
+
+/* SSE */
+(function connectSSE() {
+  const es = new EventSource('/api/events');
+  es.addEventListener('config_changed', e => {
+    addLog('info', 'Konfiguracja zmieniona: ' + e.data);
+  });
+  es.addEventListener('tuya_state', e => {
+    addLog('info', 'TUYA state: ' + e.data);
+    pollStatus();
+  });
+  es.addEventListener('satel_state', e => {
+    addLog(e.data.includes('false') ? 'warn' : 'info', 'SATEL state: ' + e.data);
+    pollStatus();
+  });
+  es.onerror = () => {
+    addLog('warn', 'SSE: rozłączono, ponowne połączenie za 5s…');
+    es.close();
+    setTimeout(connectSSE, 5000);
+  };
+})();
+
+/* ── Log box ────────────────────────────────────────────────────────────── */
+function addLog(level, msg) {
+  const box = document.getElementById('log-box');
+  const ts = new Date().toLocaleTimeString('pl');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + level;
+  div.textContent = '[' + ts + '] ' + msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ── API calls ──────────────────────────────────────────────────────────── */
+async function apiTest(target) {
+  feedback('fb-quick', 'Testuję ' + target + '…', true);
+  addLog('info', 'Test połączenia: ' + target);
+  try {
+    const r = await fetch('/api/test', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({target})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      feedback('fb-quick', '✓ ' + target.toUpperCase() + ' połączony', true);
+      addLog('info', target.toUpperCase() + ': test OK');
+    } else {
+      feedback('fb-quick', '✗ ' + target.toUpperCase() + ' błąd: ' + (d.err || '?'), false);
+      addLog('err', target.toUpperCase() + ': błąd ' + d.err);
+    }
+  } catch(e) {
+    feedback('fb-quick', '✗ Błąd sieci: ' + e, false);
+  }
+}
+
+async function apiRestart() {
+  if (!confirm('Restart urządzenia?')) return;
+  await fetch('/api/restart', {method:'POST'});
+  addLog('warn', 'Wysłano żądanie restartu');
+}
+
+async function apiReset() {
+  if (!confirm('UWAGA: Factory Reset skasuje całą konfigurację!')) return;
+  await fetch('/api/reset', {method:'POST'});
+  addLog('err', 'Factory reset wykonany');
+}
+
+/* ── Formularze ─────────────────────────────────────────────────────────── */
+async function loadNet() {
+  try {
+    const r = await fetch('/api/config/net');
+    const d = await r.json();
+    document.getElementById('n-ssid').value  = d.ssid || '';
+    document.getElementById('n-host').value  = d.hostname || '';
+    document.getElementById('n-ntp').value   = d.ntp || '';
+    document.getElementById('n-dns1').value  = d.dns1 || '';
+    document.getElementById('n-dns2').value  = d.dns2 || '';
+    document.getElementById('n-dhcp').value  = d.dhcp ? 'true' : 'false';
+    document.getElementById('n-sip').value   = d.static_ip || '';
+    document.getElementById('n-sgw').value   = d.static_gw || '';
+    document.getElementById('n-snm').value   = d.static_nm || '';
+    toggleStatic();
+  } catch(e) {}
+}
+
+async function saveNet() {
+  const body = {
+    ssid: document.getElementById('n-ssid').value,
+    password: document.getElementById('n-pass').value,
+    hostname: document.getElementById('n-host').value,
+    ntp: document.getElementById('n-ntp').value,
+    dns1: document.getElementById('n-dns1').value,
+    dns2: document.getElementById('n-dns2').value,
+    dhcp: document.getElementById('n-dhcp').value === 'true',
+    static_ip: document.getElementById('n-sip').value,
+    static_gw: document.getElementById('n-sgw').value,
+    static_nm: document.getElementById('n-snm').value,
+  };
+  try {
+    const r = await fetch('/api/config/net',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    feedback('fb-net', d.ok ? '✓ Zapisano. Restart wymagany.' : '✗ Błąd: '+JSON.stringify(d), !!d.ok);
+  } catch(e) { feedback('fb-net','✗ Błąd: '+e,false); }
+}
+
+async function loadTuya() {
+  try {
+    const r = await fetch('/api/config/tuya');
+    const d = await r.json();
+    document.getElementById('t-region').value = d.region || 'eu';
+    document.getElementById('t-cid').value    = d.client_id || '';
+    document.getElementById('t-uid').value    = d.user_uid || '';
+  } catch(e) {}
+}
+
+async function saveTuya() {
+  const body = {
+    region: document.getElementById('t-region').value,
+    client_id: document.getElementById('t-cid').value,
+    client_secret: document.getElementById('t-secret').value,
+    user_uid: document.getElementById('t-uid').value,
+  };
+  try {
+    const r = await fetch('/api/config/tuya',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    feedback('fb-tuya', d.ok ? '✓ Zapisano TUYA' : '✗ Błąd: '+JSON.stringify(d), !!d.ok);
+  } catch(e) { feedback('fb-tuya','✗ Błąd: '+e,false); }
+}
+
+async function loadSatel() {
+  try {
+    const r = await fetch('/api/config/satel');
+    const d = await r.json();
+    document.getElementById('sa-host').value  = d.host || '';
+    document.getElementById('sa-port').value  = d.port || 7094;
+    document.getElementById('sa-panel').value = d.panel_id || '';
+  } catch(e) {}
+}
+
+async function saveSatel() {
+  const body = {
+    host: document.getElementById('sa-host').value,
+    port: document.getElementById('sa-port').value,
+    password: document.getElementById('sa-pass').value,
+    panel_id: document.getElementById('sa-panel').value,
+  };
+  try {
+    const r = await fetch('/api/config/satel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d = await r.json();
+    feedback('fb-satel', d.ok ? '✓ Zapisano SATEL' : '✗ Błąd: '+JSON.stringify(d), !!d.ok);
+  } catch(e) { feedback('fb-satel','✗ Błąd: '+e,false); }
+}
+
+/* Wczytaj dane formularzy przy starcie */
+loadNet(); loadTuya(); loadSatel();
+addLog('info', 'Panel załadowany — łączę z urządzeniem…');
+</script>
+</body>
+</html>
