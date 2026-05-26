@@ -1,4 +1,5 @@
-# idf_component.yml
+# IDF Component Manager Manifest File
 dependencies:
   idf: ">=5.0"
   espressif/mdns: "^1.2.0"
+  espressif/mqtt: "^1.0.0"

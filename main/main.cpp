@@ -111,7 +111,7 @@ extern "C" void app_main(void) {
     system_services_start();
     web_tls_init("esp32-bridge.local");
     ota_manager_init();
-    mqtt_bridge_init("mqtt://192.168.1.10", "esp32/bridge");
+    char broker[128]; snprintf(broker, sizeof(broker), "mqtt://192.168.1.10"); mqtt_bridge_init(broker, "esp32/bridge");
     mqtt_bridge_start();
     mqtt_bridge_publish_ha_discovery();
     webhook_client_init("http://192.168.1.20:8080");

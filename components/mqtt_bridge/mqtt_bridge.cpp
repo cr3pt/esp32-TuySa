@@ -1,6 +1,6 @@
 #include "mqtt_bridge.h"
 #include "event_log.h"
-#include "mqtt_client.h"
+#include "esp_mqtt_client.h"
 #include "esp_log.h"
 #include <string.h>
 #include <stdlib.h>

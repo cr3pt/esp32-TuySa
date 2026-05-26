@@ -1,29 +1,41 @@
 <!doctype html>
 <html lang="pl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ESP32 Bridge Panel</title>
 <style>
 body{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;margin:0}
 header{padding:18px 20px;background:#111827;border-bottom:1px solid #334155}
-main{padding:20px;max-width:1200px;margin:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.card{background:#172033;border:1px solid #334155;border-radius:12px;padding:16px}button,select{padding:10px 12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff}button{background:#0284c7}pre{white-space:pre-wrap}
+main{padding:20px;max-width:1200px;margin:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:#172033;border:1px solid #334155;border-radius:12px;padding:16px}
+input,select,button{padding:10px 12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;margin:4px 0}
+button{background:#0284c7;cursor:pointer}
+button:hover{background:#0369a1}
+pre{white-space:pre-wrap;background:#0f172a;padding:10px;border-radius:8px;overflow:auto}
+label{display:block;margin:8px 0 4px;font-weight:bold}
 </style>
 </head>
 <body>
-<header><h1>ESP32 TUYA + SATEL Bridge</h1><p>Etap 5: tryby, harmonogram, bezpieczeństwo, watchdog</p></header>
+<header><h1>ESP32 TUYA + SATEL Bridge</h1><p>Panel konfiguracyjny z MQTT</p></header>
 <main>
 <div class="grid">
-<section class="card"><h2>Tryb pracy</h2><select id="mode"><option>HOME</option><option>AWAY</option><option selected>NIGHT</option><option>MANUAL</option></select><button onclick="setMode()">Ustaw tryb</button><pre id="modeStatus"></pre></section>
+<section class="card"><h2>Tryb pracy</h2><select id="mode"><option>HOME</option><option>AWAY</option><option>NIGHT</option><option>MANUAL</option></select><button onclick="setMode()">Ustaw tryb</button><pre id="modeStatus"></pre></section>
+<section class="card"><h2>Konfiguracja MQTT</h2><label>Broker URL</label><input type="text" id="mqttBroker" placeholder="mqtt://192.168.1.10:1883"><label>Base Topic</label><input type="text" id="mqttTopic" placeholder="esp32/bridge"><button onclick="setMQTT()">Zapisz MQTT</button><pre id="mqttStatus"></pre></section>
 <section class="card"><h2>Rate limit</h2><pre id="rate"></pre></section>
 <section class="card"><h2>Watchdog</h2><pre id="wd"></pre></section>
 <section class="card"><h2>Zdarzenia</h2><pre id="events"></pre></section>
+<section class="card"><h2>MQTT Status</h2><pre id="mqttState"></pre></section>
+<section class="card"><h2>OTA</h2><input type="text" id="otaUrl" placeholder="https://example.com/firmware.bin"><button onclick="doOTA()">Aktualizuj</button><pre id="otaStatus"></pre></section>
 </div>
 </main>
 <script>
-async function load(id,url){try{const r=await fetch(url);document.getElementById(id).textContent=await r.text()}catch(e){document.getElementById(id).textContent=String(e)}}
-async function tick(){load('modeStatus','/api/mode');load('rate','/api/rate-limit');load('wd','/api/watchdog');load('events','/api/events')}
+async function load(id,url){try{const r=await fetch(url);document.getElementById(id).textContent=await r.text()}catch(e){document.getElementById(id).textContent="Error: "+e}}
+async function tick(){load('modeStatus','/api/mode');load('rate','/api/rate-limit');load('wd','/api/watchdog');load('events','/api/events');load('mqttState','/api/mqtt');load('otaStatus','/api/ota')}
 async function setMode(){await fetch('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:document.getElementById('mode').value})});tick()}
+async function setMQTT(){await fetch('/api/mqtt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({broker:document.getElementById('mqttBroker').value,topic:document.getElementById('mqttTopic').value})});tick()}
+async function doOTA(){const url=document.getElementById('otaUrl').value;if(!url){alert("Wymagany URL OTA");return}await fetch('/api/ota',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});tick()}
 setInterval(tick,5000);tick();
 </script>
 </body>

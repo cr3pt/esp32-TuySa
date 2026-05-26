@@ -1,3 +1,4 @@
+#include "nvs_flash.h"
 #include "http_server.h"
 #include "config_manager.h"
 #include "esp_http_server.h"
@@ -118,10 +119,29 @@ esp_err_t http_server_init(const char *username, const char *password) {
     return ESP_OK;
 }
 
+static esp_err_t mqtt_set(httpd_req_t *req) {
+    if (require_auth(req) != ESP_OK) return ESP_FAIL;
+    if (!rate_limit_allow("api_mqtt_set", 5, 600)) return httpd_resp_send_err(req, HTTPD_429_TOO_MANY_REQUESTS, "rate limit");
+    char body[256] = {}; int r = httpd_req_recv(req, body, sizeof(body)-1); if (r <= 0) return httpd_resp_send_500(req);
+    char broker[128] = {}, topic[128] = {};
+    char *b = strstr(body, "\"broker\":"); char *t = strstr(body, "\"topic\":");
+    if (!b || !t) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing broker/topic");
+    b += 9; t += 9; char *be = strchr(b, '"'); char *te = strchr(t, '"'); if (!be || !te) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "bad body");
+    *be = 0; *te = 0; snprintf(broker, sizeof(broker), "%s", b); snprintf(topic, sizeof(topic), "%s", t);
+    if (strlen(broker) < 5 || strlen(topic) < 3) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid values");
+    // Store MQTT config in NVS (simplified - in production use config_manager)
+    nvs_handle_t nvs; if (nvs_open("mqtt_cfg", NVS_READWRITE, &nvs) == ESP_OK) {
+        nvs_set_str(nvs, "broker", broker); nvs_set_str(nvs, "topic", topic); nvs_commit(nvs); nvs_close(nvs);
+        event_log_add(EV_INFO, "http", "MQTT config updated: %s %s", broker, topic);
+    }
+    return httpd_resp_sendstr(req, "{\"ok\":true,\"message\":\"MQTT config updated\"}");
+}
+
 esp_err_t http_server_start(void) {
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG(); cfg.server_port = 80; if (httpd_start(&s_server, &cfg) != ESP_OK) return ESP_FAIL; s_status.running = true;
     httpd_uri_t uris[] = {
-        {.uri="/", .method=HTTP_GET, .handler=root_get}, {.uri="/api/status", .method=HTTP_GET, .handler=status_get}, {.uri="/api/system", .method=HTTP_GET, .handler=system_get}, {.uri="/api/tls", .method=HTTP_GET, .handler=tls_get}, {.uri="/api/ota", .method=HTTP_GET, .handler=ota_get}, {.uri="/api/ota", .method=HTTP_POST, .handler=ota_post}, {.uri="/api/mode", .method=HTTP_GET, .handler=mode_get}, {.uri="/api/mode", .method=HTTP_POST, .handler=mode_post}, {.uri="/api/rate-limit", .method=HTTP_GET, .handler=rate_get}, {.uri="/api/watchdog", .method=HTTP_GET, .handler=watchdog_get}, {.uri="/api/events", .method=HTTP_GET, .handler=events_get}, {.uri="/api/mqtt", .method=HTTP_GET, .handler=mqtt_get}, {.uri="/api/webhook", .method=HTTP_GET, .handler=webhook_get}, {.uri="/api/auth", .method=HTTP_POST, .handler=auth_post},
+        {.uri="/", .method=HTTP_GET, .handler=root_get}, {.uri="/api/status", .method=HTTP_GET, .handler=status_get}, {.uri="/api/system", .method=HTTP_GET, .handler=system_get}, {.uri="/api/tls", .method=HTTP_GET, .handler=tls_get}, {.uri="/api/ota", .method=HTTP_GET, .handler=ota_get}, {.uri="/api/ota", .method=HTTP_POST, .handler=ota_post}, {.uri="/api/mode", .method=HTTP_GET, .handler=mode_get}, {.uri="/api/mode", .method=HTTP_POST, .handler=mode_post}, {.uri="/api/rate-limit", .method=HTTP_GET, .handler=rate_get}, {.uri="/api/watchdog", .method=HTTP_GET, .handler=watchdog_get}, {.uri="/api/events", .method=HTTP_GET, .handler=events_get}, {.uri="/api/mqtt", .method=HTTP_GET, .handler=mqtt_get}, {.uri="/api/webhook", .method=HTTP_GET, .handler=webhook_get},
+        {.uri="/api/mqtt", .method=HTTP_POST, .handler=mqtt_set}, {.uri="/api/auth", .method=HTTP_POST, .handler=auth_post},
     };
     for (size_t i = 0; i < sizeof(uris)/sizeof(uris[0]); i++) httpd_register_uri_handler(s_server, &uris[i]);
     ESP_LOGI(TAG, "HTTP server started on :80 with Basic Auth + salted SHA-256");
