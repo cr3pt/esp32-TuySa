@@ -1,9 +1,1 @@
-idf_component_register(
-    SRCS "crypto_manager.cpp"
-    INCLUDE_DIRS "include"
-    REQUIRES
-        config_manager
-        esp_log
-        mbedtls
-        nvs_flash
-)
+idf_component_register(SRCS "crypto_manager.cpp" INCLUDE_DIRS "include" REQUIRES nvs_flash mbedtls esp_log config_manager)

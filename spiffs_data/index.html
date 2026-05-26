@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 Bridge</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f7f6f2;color:#28251d;min-height:100vh}
+header{background:#01696f;color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px}
+header h1{font-size:1.2rem;font-weight:600}
+#led{width:14px;height:14px;border-radius:50%;background:#aaa;margin-left:auto}
+.led-ok{background:#4caf50!important}
+.led-warn{background:#ff9800!important;animation:blink .5s infinite}
+.led-err{background:#f44336!important;animation:blink .3s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+nav{display:flex;background:#fff;border-bottom:1px solid #ddd}
+nav button{flex:1;padding:12px;border:none;background:none;cursor:pointer;font-size:.9rem;color:#555;border-bottom:3px solid transparent}
+nav button.active{border-bottom-color:#01696f;color:#01696f;font-weight:600}
+.page{display:none;padding:20px;max-width:960px;margin:0 auto}
+.page.active{display:block}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 5px rgba(0,0,0,.08);padding:20px;margin-bottom:16px}
+.card h3{margin-bottom:14px;font-size:1rem;color:#01696f}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+label{display:block;font-size:.8rem;color:#666;margin-bottom:3px;margin-top:10px}
+input,select{width:100%;padding:8px 10px;border:1px solid #d4d1ca;border-radius:6px;font-size:.9rem}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-ok{background:#d4efcc;color:#2d6a1e}
+.badge-err{background:#ffd9d9;color:#8b1a1a}
+.badge-warn{background:#fff3cd;color:#856404}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.85rem}
+.btn-primary{background:#01696f;color:#fff}
+.btn-danger{background:#c62828;color:#fff}
+.btn-ghost{background:#eee;color:#333}
+.stat{text-align:center;padding:12px}
+.stat .val{font-size:1.8rem;font-weight:700;color:#01696f}
+.stat .lbl{font-size:.75rem;color:#888;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{text-align:left;padding:8px;border-bottom:2px solid #eee;color:#666;font-weight:600}
+td{padding:8px;border-bottom:1px solid #f0f0f0}
+pre{background:#1e1e1e;color:#d4d4d4;padding:14px;border-radius:8px;font-size:.8rem;overflow:auto;max-height:200px}
+</style>
+</head>
+<body>
+<header>
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="rgba(255,255,255,.2)"/><rect x="6" y="6" width="7" height="7" rx="1" fill="white"/><rect x="15" y="6" width="7" height="7" rx="1" fill="white"/><rect x="6" y="15" width="7" height="7" rx="1" fill="white"/><circle cx="18.5" cy="18.5" r="3.5" fill="white"/></svg>
+<h1>ESP32 TUYA + SATEL Bridge</h1>
+<div id="led" title="Status systemu"></div>
+</header>
+<nav>
+<button class="active" onclick="tab(0)">Dashboard</button>
+<button onclick="tab(1)">Reguly</button>
+<button onclick="tab(2)">TUYA</button>
+<button onclick="tab(3)">SATEL</button>
+<button onclick="tab(4)">Ustawienia</button>
+</nav>
+<div class="page active" id="p0">
+<div class="grid2">
+<div class="card"><h3>WiFi</h3><div class="grid2"><div class="stat"><div class="val" id="wifi-ip">--</div><div class="lbl">Adres IP</div></div><div class="stat"><div class="val" id="wifi-rssi">--</div><div class="lbl">RSSI dBm</div></div></div></div>
+<div class="card"><h3>Systemy</h3><table><tr><td>TUYA Cloud</td><td><span class="badge badge-warn" id="tuya-badge">Laczenie</span></td></tr><tr><td>SATEL ETHM-1</td><td><span class="badge badge-warn" id="satel-badge">Laczenie</span></td></tr></table></div>
+</div>
+<div class="card"><h3>Statystyki regul</h3><div class="grid2" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><div class="val" id="rules-total">0</div><div class="lbl">Regul lacznie</div></div><div class="stat"><div class="val" id="rules-enabled">0</div><div class="lbl">Aktywnych</div></div><div class="stat"><div class="val" id="rules-fired">0</div><div class="lbl">Wywolan</div></div></div></div>
+<div class="card"><h3>Log zdarzen</h3><pre id="log">Oczekiwanie...</pre></div>
+</div>
+<div class="page" id="p1">
+<div class="card"><h3>Lista regul <button class="btn btn-primary" style="float:right" onclick="loadRules()">Odswiez</button></h3><table><thead><tr><th>Nazwa</th><th>Stan</th><th>Wywolania</th><th>Akcja</th></tr></thead><tbody id="rules-table"><tr><td colspan="4" style="text-align:center;color:#aaa">Ladowanie...</td></tr></tbody></table></div>
+<div class="card"><h3>Dodaj regule</h3><div class="grid2"><div><label>Nazwa</label><input id="r-name" placeholder="Czujka salon - Swiatlo"><label>Trigger (zrodlo)</label><select id="r-src"><option value="satel_zone">SATEL - strefa naruszona</option><option value="tuya_device">TUYA - zmiana urzadzenia</option></select><label>ID strefy/urzadzenia</label><input id="r-src-id" placeholder="np. 1"></div><div><label>Akcja (cel)</label><select id="r-dst"><option value="tuya_on">TUYA - wlacz</option><option value="tuya_off">TUYA - wylacz</option><option value="satel_output_on">SATEL - wyjscie ON</option><option value="satel_output_off">SATEL - wyjscie OFF</option><option value="satel_ip_on">SATEL - wejscie IP ON</option><option value="satel_ip_off">SATEL - wejscie IP OFF</option></select><label>ID celu</label><input id="r-dst-id" placeholder="device_id lub numer"><label>Tryb</label><select id="r-dry"><option value="0">Aktywny</option><option value="1">Testowy (dry-run)</option></select></div></div><div style="margin-top:14px"><button class="btn btn-primary" onclick="addRule()">Dodaj</button></div></div>
+</div>
+<div class="page" id="p2">
+<div class="card"><h3>Dane TUYA Cloud</h3><div class="grid2"><div><label>Region</label><select id="tuya-region"><option>eu</option><option>us</option><option>cn</option><option>in</option></select><label>Client ID</label><input id="tuya-cid" placeholder="xxxxxxxx"><label>Client Secret</label><input type="password" id="tuya-secret" placeholder="xxxxxxxx"></div><div><label>User UID</label><input id="tuya-uid" placeholder="ay..."><div style="margin-top:20px"><button class="btn btn-ghost" onclick="testTuya()">Testuj polaczenie</button><span id="tuya-test-result" style="margin-left:10px;font-size:.85rem"></span></div></div></div><div style="margin-top:14px"><button class="btn btn-primary" onclick="saveTuya()">Zapisz i szyfruj</button></div></div>
+<div class="card"><h3>Urzadzenia TUYA (<span id="tuya-dev-count">0</span>)</h3><table><thead><tr><th>ID</th><th>Nazwa</th><th>Online</th></tr></thead><tbody id="tuya-devices"><tr><td colspan="3" style="text-align:center;color:#aaa">Brak</td></tr></tbody></table></div>
+</div>
+<div class="page" id="p3">
+<div class="card"><h3>Dane SATEL ETHM-1 PLUS</h3><div class="grid2"><div><label>Adres IP/hostname</label><input id="satel-host" placeholder="192.168.1.100"><label>Port</label><input id="satel-port" placeholder="7094" type="number"></div><div><label>Haslo serwisowe (hex)</label><input id="satel-pass" placeholder="1234" maxlength="8"><div style="margin-top:20px"><button class="btn btn-ghost" onclick="testSatel()">Testuj polaczenie</button><span id="satel-test-result" style="margin-left:10px;font-size:.85rem"></span></div></div></div><div style="margin-top:14px"><button class="btn btn-primary" onclick="saveSatel()">Zapisz i szyfruj</button></div></div>
+<div class="card"><h3>Status centrali</h3><table><tr><td>Stan</td><td><span class="badge badge-warn" id="satel-state-badge">Laczenie</span></td></tr><tr><td>Naruszone strefy</td><td id="satel-violated">-</td></tr><tr><td>Uzbrojen</td><td id="satel-armed">-</td></tr><tr><td>Reconnecty</td><td id="satel-recon">-</td></tr></table></div>
+</div>
+<div class="page" id="p4">
+<div class="card"><h3>Klucz szyfrowania</h3><label>Haslo szyfrowania (ustaw raz)</label><input type="password" id="enc-key" placeholder="min. 8 znakow"><div style="margin-top:10px"><button class="btn btn-primary" onclick="setKey()">Ustaw klucz</button><span id="key-result" style="margin-left:10px;font-size:.85rem"></span></div></div>
+<div class="card"><h3>Siec WiFi</h3><div class="grid2"><div><label>SSID</label><input id="net-ssid"><label>Haslo WiFi</label><input type="password" id="net-pass"><label>Hostname</label><input id="net-host" placeholder="esp32-bridge"></div><div><label>NTP</label><input id="net-ntp" placeholder="pool.ntp.org"><label>DNS 1</label><input id="net-dns1"><label>DNS 2</label><input id="net-dns2"></div></div><div style="margin-top:14px"><button class="btn btn-primary" onclick="saveNet()">Zapisz siec</button></div></div>
+<div class="card" style="border:1px solid #f44336"><h3 style="color:#c62828">Strefa niebezpieczna</h3><p style="font-size:.85rem;color:#666;margin-bottom:12px">Kasuje konfiguracje i uruchamia tryb setup.</p><button class="btn btn-danger" onclick="if(confirm('Factory reset?'))factoryReset()">Factory Reset</button></div>
+</div>
+<script>
+var pages=document.querySelectorAll('.page'),tabs=document.querySelectorAll('nav button'),logLines=[];
+function tab(n){pages.forEach(function(p,i){p.classList.toggle('active',i==n);tabs[i].classList.toggle('active',i==n);});if(n==1)loadRules();if(n==2)loadDevices();}
+function log(m){logLines.unshift('['+new Date().toLocaleTimeString()+'] '+m);if(logLines.length>50)logLines.pop();document.getElementById('log').textContent=logLines.join('\n');}
+function setLed(s){var l=document.getElementById('led');l.className='';l.classList.add(s=='ok'?'led-ok':s=='warn'?'led-warn':'led-err');}
+function setBadge(id,ok,txt){var b=document.getElementById(id);b.textContent=txt;b.className='badge '+(ok?'badge-ok':ok===false?'badge-err':'badge-warn');}
+function loadStatus(){fetch('/api/status').then(function(r){return r.json();}).then(function(d){document.getElementById('wifi-ip').textContent=d.wifi&&d.wifi.ip?d.wifi.ip:'--';document.getElementById('wifi-rssi').textContent=(d.wifi&&d.wifi.rssi?d.wifi.rssi:'--')+' dBm';setBadge('tuya-badge',d.tuya&&d.tuya.connected,d.tuya&&d.tuya.connected?'Online':'Blad');setBadge('satel-badge',d.satel&&d.satel.connected,d.satel&&d.satel.connected?'Online':'Blad');document.getElementById('rules-total').textContent=d.rules?d.rules.total:0;document.getElementById('rules-enabled').textContent=d.rules?d.rules.enabled:0;document.getElementById('rules-fired').textContent=d.rules?d.rules.fired:0;if(d.satel){document.getElementById('satel-violated').textContent=d.satel.violated_zones||0;document.getElementById('satel-armed').textContent=d.satel.armed_parts||0;document.getElementById('satel-recon').textContent=d.satel.reconnects||0;}setBadge('satel-state-badge',d.satel&&d.satel.connected,d.satel&&d.satel.connected?'Online':'Offline');setLed(d.tuya&&d.tuya.connected&&d.satel&&d.satel.connected?'ok':d.state==='degraded'?'warn':'err');}).catch(function(e){setLed('err');log('Blad statusu: '+e.message);});}
+function loadRules(){var tb=document.getElementById('rules-table');tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#aaa">Ladowanie...</td></tr>';fetch('/api/rules').then(function(r){return r.json();}).then(function(d){if(!d.rules||!d.rules.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:#aaa">Brak regul</td></tr>';return;}tb.innerHTML=d.rules.map(function(r){return '<tr><td>'+r.name+'</td><td><span class="badge '+(r.enabled?'badge-ok':'badge-warn')+'">'+(r.enabled?'Aktywna':'Wylaczona')+'</span>'+(r.dry_run?' <span class="badge badge-warn">dry-run</span>':'')+'</td><td>'+(r.fire_count||0)+'</td><td><button class="btn btn-ghost" onclick="fireRule(\''+r.id+'\')">Test</button> <button class="btn btn-danger" onclick="delRule(\''+r.id+'\')">Usun</button></td></tr>';}).join('');}).catch(function(e){tb.innerHTML='<tr><td colspan="4">Blad: '+e.message+'</td></tr>';});}
+function addRule(){var body={name:document.getElementById('r-name').value,src_type:document.getElementById('r-src').value,src_id:document.getElementById('r-src-id').value,dst_type:document.getElementById('r-dst').value,dst_id:document.getElementById('r-dst-id').value,dry_run:document.getElementById('r-dry').value==='1'};fetch('/api/rules',{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){log(d.ok?'Dodano regule':'Blad dodawania');loadRules();});}
+function delRule(id){fetch('/api/rules/'+id,{method:'DELETE'}).then(function(){log('Usunieto regule '+id);loadRules();});}
+function fireRule(id){fetch('/api/rules/'+id+'/fire',{method:'POST'}).then(function(r){return r.json();}).then(function(d){log(d.ok?'Wyzwolono regule '+id:'Blad wyzwolenia');});}
+function loadDevices(){fetch('/api/tuya/devices').then(function(r){return r.json();}).then(function(d){document.getElementById('tuya-dev-count').textContent=d.total||0;var tb=document.getElementById('tuya-devices');tb.innerHTML=d.devices?d.devices.map(function(x){return '<tr><td>'+x.id+'</td><td>'+x.name+'</td><td><span class="badge '+(x.online?'badge-ok':'badge-err')+'">'+(x.online?'Online':'Offline')+'</span></td></tr>';}).join(''):'<tr><td colspan="3">Brak</td></tr>';}).catch(function(){});}
+function testTuya(){var el=document.getElementById('tuya-test-result');el.textContent='Testuje...';fetch('/api/test/tuya',{method:'POST'}).then(function(r){return r.json();}).then(function(d){el.textContent=d.ok?'OK':'Blad';log('Test TUYA: '+(d.ok?'OK':'FAIL'));}).catch(function(e){el.textContent='blad sieci';});}
+function testSatel(){var el=document.getElementById('satel-test-result');el.textContent='Testuje...';fetch('/api/test/satel',{method:'POST'}).then(function(r){return r.json();}).then(function(d){el.textContent=d.ok?'OK':'Blad';log('Test SATEL: '+(d.ok?'OK':'FAIL'));}).catch(function(e){el.textContent='blad sieci';});}
+function saveTuya(){var body={region:document.getElementById('tuya-region').value,client_id:document.getElementById('tuya-cid').value,client_secret:document.getElementById('tuya-secret').value,user_uid:document.getElementById('tuya-uid').value};fetch('/api/tuya/creds',{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){log(d.ok?'Zapisano TUYA':'Blad zapisu TUYA');});}
+function saveSatel(){var body={host:document.getElementById('satel-host').value,port:parseInt(document.getElementById('satel-port').value||'7094'),password:document.getElementById('satel-pass').value};fetch('/api/satel/creds',{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){log(d.ok?'Zapisano SATEL':'Blad zapisu SATEL');});}
+function setKey(){var k=document.getElementById('enc-key').value;if(!k){alert('Podaj haslo szyfrowania');return;}fetch('/api/key',{method:'POST',body:k}).then(function(r){return r.json();}).then(function(d){document.getElementById('key-result').textContent=d.ok?'Klucz ustawiony':'Blad';log('Klucz: '+(d.ok?'OK':'FAIL'));});}
+function saveNet(){log('TODO: zapisz siec przez API');}
+function factoryReset(){fetch('/api/reset',{method:'POST'}).then(function(){log('Factory reset wyslany. Restart...');});}
+loadStatus();setInterval(loadStatus,5000);
+</script>
+</body>
+</html>
