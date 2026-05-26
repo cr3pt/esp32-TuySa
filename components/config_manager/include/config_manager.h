@@ -10,11 +10,11 @@ typedef struct { char region[8]; char client_id[48]; char client_secret[48]; cha
 typedef struct { char host[64]; uint16_t port; char password[16]; char panel_id[32]; } satel_creds_t;
 esp_err_t config_manager_save_net(const net_config_t *cfg);
 esp_err_t config_manager_load_net(net_config_t *cfg);
-esp_err_t config_manager_save_tuya(const tuya_creds_t *c);
-esp_err_t config_manager_load_tuya(tuya_creds_t *c);
-esp_err_t config_manager_save_satel(const satel_creds_t *c);
-esp_err_t config_manager_load_satel(satel_creds_t *c);
 esp_err_t config_manager_erase_all(void);
+typedef struct { char username[32]; char password[64]; } panel_auth_t;
+esp_err_t config_manager_save_panel_auth(const panel_auth_t *cfg);
+esp_err_t config_manager_load_panel_auth(panel_auth_t *cfg);
+
 #ifdef __cplusplus
 }
 #endif

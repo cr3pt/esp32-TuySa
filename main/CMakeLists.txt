@@ -1,1 +1,8 @@
-idf_component_register(SRCS "main.cpp" INCLUDE_DIRS "." REQUIRES boot_manager config_manager crypto_manager tuya_client satel_client rule_engine watchdog wifi_manager captive_portal spiffs_www http_server esp_log freertos)
+idf_component_register(
+    SRCS "main.cpp"
+    INCLUDE_DIRS "."
+    REQUIRES satel_client tuya_client crypto_manager config_manager
+             system_services ota_manager web_tls mqtt_bridge webhook_client event_log
+             automation_modes rate_limit hw_watchdog http_server
+             nvs_flash esp_log freertos
+)

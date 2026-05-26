@@ -1,10 +1,1 @@
-#include "captive_portal.h"
-#include "config_manager.h"
-#include "boot_manager.h"
-#include "esp_http_server.h"
-#include <string.h>
-static portal_saved_cb_t s_cb=NULL;
-static const char *HTML="<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>ESP32 Bridge Setup</title><style>body{font-family:sans-serif;max-width:520px;margin:40px auto;padding:0 16px}input{width:100%;padding:8px;margin:4px 0 12px;box-sizing:border-box}button{background:#01696f;color:#fff;padding:10px 20px;border:none;border-radius:4px}</style></head><body><h2>ESP32 TUYA+SATEL Bridge</h2><form method='POST' action='/save'><label>SSID</label><input name='ssid' required><label>Haslo</label><input type='password' name='password'><label>Hostname</label><input name='hostname' value='esp32-bridge'><label>NTP</label><input name='ntp' value='pool.ntp.org'><button type='submit'>Zapisz i restart</button></form></body></html>";
-static esp_err_t get_handler(httpd_req_t *r){httpd_resp_set_type(r,"text/html"); return httpd_resp_send(r,HTML,HTTPD_RESP_USE_STRLEN);} 
-static esp_err_t post_handler(httpd_req_t *r){char buf[512]={}; int n=httpd_req_recv(r,buf,sizeof(buf)-1); if(n<0)n=0; buf[n]='\0'; net_config_t net={}; net.dhcp=true; char *p; if((p=strstr(buf,"ssid="))){sscanf(p+5,"%63[^&]",net.ssid);} if((p=strstr(buf,"password="))){sscanf(p+9,"%63[^&]",net.password);} if((p=strstr(buf,"hostname="))){sscanf(p+9,"%31[^&]",net.hostname);} if((p=strstr(buf,"ntp="))){sscanf(p+4,"%63[^&]",net.ntp_server);} config_manager_save_net(&net); boot_manager_clear_setup_flag(); httpd_resp_sendstr(r,"<html><body><h2>Zapisano. Restart...</h2></body></html>"); if(s_cb)s_cb(); return ESP_OK; }
-esp_err_t captive_portal_start(portal_saved_cb_t cb){ s_cb=cb; httpd_config_t cfg=HTTPD_DEFAULT_CONFIG(); httpd_handle_t sv=NULL; ESP_ERROR_CHECK(httpd_start(&sv,&cfg)); httpd_uri_t g={"/",HTTP_GET,get_handler,NULL}; httpd_uri_t p={"/save",HTTP_POST,post_handler,NULL}; httpd_register_uri_handler(sv,&g); httpd_register_uri_handler(sv,&p); return ESP_OK; }
+/* stub */

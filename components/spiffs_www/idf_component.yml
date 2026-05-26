@@ -1,4 +1,0 @@
-## Wymagania komponentu spiffs_www
-dependencies:
-  idf:
-    version: ">=5.0.0"
