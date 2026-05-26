@@ -1,3 +1,4 @@
+#include "mdns_wrapper.h"
 #include "satel_client.h"
 #include "tuya_client.h"
 #include "crypto_manager.h"
@@ -109,6 +110,7 @@ extern "C" void app_main(void) {
 
     system_services_init(nc.hostname, nc.ntp_server);
     system_services_start();
+    mdns_wrapper_init("esp32-bridge");
     web_tls_init("esp32-bridge.local");
     ota_manager_init();
     char broker[128]; snprintf(broker, sizeof(broker), "mqtt://192.168.1.10"); mqtt_bridge_init(broker, "esp32/bridge");

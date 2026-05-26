@@ -1,3 +1,4 @@
+#include "esp_mdns.h"
 #include "system_services.h"
 #include "esp_log.h"
 #include "esp_sntp.h"

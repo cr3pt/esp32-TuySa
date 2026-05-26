@@ -181,16 +181,3 @@ curl -u admin:StrongPass123! -X POST http://ESP32-IP/api/auth \
 curl -u operator:NoweSilneHaslo123 http://ESP32-IP/api/events
 ```
 
-## Ograniczenia obecnej wersji
-
-Mimo że projekt zawiera wszystkie główne moduły i pełny zestaw plików, należy go traktować jako zaawansowany szkielet integracyjny, a nie gotowy produkt komercyjny. W szczególności warto jeszcze dopracować pełne spięcie z `esp_https_server`, wykonać pełny build i testy integracyjne oraz rozszerzyć frontend WWW o kompletną konfigurację wszystkich reguł i encji. [cite:1]
-
-## Rekomendowane dalsze kroki
-
-Najbardziej praktyczne dalsze prace to:
-
-- przełączenie warstwy WWW z HTTP na pełne HTTPS z użyciem wygenerowanego certyfikatu, [cite:1]
-- użycie porównania hashy w czasie stałym zamiast zwykłego `memcmp`, [cite:1]
-- walidacja pełnej kompilacji `idf.py build`, [cite:1]
-- testy z realnym TUYA Cloud i prawdziwą centralą SATEL, [cite:1]
-- rozbudowa interfejsu WWW o pełny edytor reguł i diagnostykę połączeń. [cite:1]

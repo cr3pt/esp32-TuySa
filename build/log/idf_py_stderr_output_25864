@@ -1,0 +1,14 @@
+Command: cmake -G Ninja -B /home/cr3pt/TuySa/build -DPYTHON_DEPS_CHECKED=1 -DPYTHON=/home/cr3pt/.espressif/python_env/idf6.0_py3.14_env/bin/python -DESP_PLATFORM=1 -DIDF_TARGET=esp32 -DCCACHE_ENABLE=False /home/cr3pt/TuySa
+CMake Error at /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:380 (message):
+  Failed to resolve component 'esp_mqtt' required by component 'mqtt_bridge':
+  unknown name.
+Call Stack (most recent call first):
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:423 (__build_resolve_and_add_req)
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:424 (__build_expand_requirements)
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:424 (__build_expand_requirements)
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:424 (__build_expand_requirements)
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/build.cmake:753 (__build_expand_requirements)
+  /home/cr3pt/.espressif/v6.0.1/esp-idf/tools/cmake/project.cmake:773 (idf_build_process)
+  CMakeLists.txt:3 (project)
+
+
