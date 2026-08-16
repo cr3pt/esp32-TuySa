@@ -4,6 +4,7 @@
 #include "crypto_manager.h"
 #include "config_manager.h"
 #include "http_server.h"
+#include "rule_engine.h"
 #include "system_services.h"
 #include "ota_manager.h"
 #include "web_tls.h"
@@ -61,6 +62,11 @@ static void on_zone_change(int zone, bool violated, void *) {
         tuya_cmd_bool(DEMO_LIGHT_ID, "switch_led", true);
         event_log_add(EV_SATEL, "rule", "Night rule triggered: zone %d -> light on", zone);
         xTaskCreate(delayed_light_off_task, "light_off", 3072, NULL, 4, NULL);
+    }
+
+    if (violated && satel_is_zone_alarmed((uint8_t)zone)) {
+        char reason[48]; snprintf(reason, sizeof(reason), "SATEL: alarm w strefie %d", zone);
+        rule_engine_trigger_escalation(reason);
     }
 }
 
@@ -142,6 +148,9 @@ extern "C" void app_main(void) {
 
     http_server_init("admin", "StrongPass123!");
     http_server_start();
+
+    rule_engine_init();
+    rule_engine_start();
 
     satel_client_init();
     tuya_client_init();

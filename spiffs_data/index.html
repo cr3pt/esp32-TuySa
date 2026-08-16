@@ -391,10 +391,13 @@ async function loadSchedules() { schedulesData = await apiGet('/api/schedules');
 async function saveSchedules() { await apiFetch('/api/schedules', 'POST', { schedules: schedulesData }); }
 
 /* ---------- Krok: Eskalacja ---------- */
+let escalationPollTimer = null;
 function renderEscalation(c) {
   c.innerHTML = `
     <h2>Eskalacja</h2>
-    <p class="hint">Jeśli alarm nie zostanie potwierdzony w zadanym czasie, kolejne poziomy eskalacji wysyłają powiadomienia (webhook/MQTT) w narastających odstępach.</p>
+    <p class="hint">Jeśli alarm nie zostanie potwierdzony w zadanym czasie, kolejne poziomy eskalacji wysyłają powiadomienia (webhook/MQTT) w narastających odstępach. Uruchamia to <code>rule_engine</code> w tle na urządzeniu.</p>
+    <div class="info-box" id="esc_live">Stan eskalacji: sprawdzam…</div>
+    <button class="secondary small-btn" type="button" id="esc_ack_btn" style="display:none">Potwierdź alarm</button>
     <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" id="esc_enabled"> Włącz eskalację</label></div>
     <label>Czas na potwierdzenie alarmu (sekundy)</label>
     <input type="number" id="esc_ack" min="0">
@@ -402,6 +405,26 @@ function renderEscalation(c) {
     <button class="secondary small-btn" type="button" id="esc_add">+ Dodaj poziom</button>
   `;
   el('esc_add').onclick = () => { if (escalationData.levels.length < 4) { escalationData.levels.push({ after_sec:60, via_webhook:true, via_mqtt:false, note:'' }); renderEscLevels(); } };
+  el('esc_ack_btn').onclick = async () => { try { await apiFetch('/api/escalation/ack', 'POST'); await pollEscalationStatus(); } catch(e) { showError(e.message); } };
+  pollEscalationStatus();
+  if (escalationPollTimer) clearInterval(escalationPollTimer);
+  escalationPollTimer = setInterval(pollEscalationStatus, 4000);
+}
+async function pollEscalationStatus() {
+  const box = el('esc_live'), btn = el('esc_ack_btn');
+  if (!box) return;
+  try {
+    const d = await apiGet('/api/rule-engine');
+    if (d.escalation_active) {
+      box.className = 'info-box warn';
+      box.textContent = 'Eskalacja AKTYWNA – powód: ' + d.escalation_reason + ', odpalony poziom: ' + d.escalation_level;
+      if (btn) btn.style.display = 'inline-block';
+    } else {
+      box.className = 'info-box';
+      box.textContent = 'Stan eskalacji: brak aktywnego alarmu.';
+      if (btn) btn.style.display = 'none';
+    }
+  } catch (e) { box.textContent = 'Nie udało się pobrać stanu eskalacji.'; }
 }
 function renderEscLevels() {
   const box = el('esc_levels'); if (!box) return;
@@ -478,6 +501,7 @@ function renderStepper() {
 }
 
 async function goTo(i) {
+  if (escalationPollTimer) { clearInterval(escalationPollTimer); escalationPollTimer = null; }
   current = i;
   clearError();
   el('wizardActions').style.display = 'flex';

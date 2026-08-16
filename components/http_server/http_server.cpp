@@ -16,6 +16,7 @@
 #include "event_log.h"
 #include "mqtt_bridge.h"
 #include "webhook_client.h"
+#include "rule_engine.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -485,6 +486,15 @@ static esp_err_t wizard_advance_post(httpd_req_t *req) {
     return httpd_resp_sendstr(req, "{\"ok\":true}");
 }
 
+/* --- Silnik regul: status + potwierdzenie alarmu (zatrzymuje eskalacje) --- */
+static esp_err_t rule_engine_get(httpd_req_t *req) { if (require_auth(req) != ESP_OK) return ESP_FAIL; return json_send(req, rule_engine_status_json()); }
+static esp_err_t escalation_ack_post(httpd_req_t *req) {
+    if (require_auth(req) != ESP_OK) return ESP_FAIL;
+    rule_engine_ack_escalation();
+    event_log_add(EV_INFO, "http", "Alarm potwierdzony przez panel WWW");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
 esp_err_t http_server_start(void) {
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG(); cfg.server_port = 80; cfg.max_uri_handlers = 40; if (httpd_start(&s_server, &cfg) != ESP_OK) return ESP_FAIL; s_status.running = true;
     httpd_uri_t uris[] = {
@@ -498,6 +508,7 @@ esp_err_t http_server_start(void) {
         {.uri="/api/schedules", .method=HTTP_GET, .handler=schedules_get}, {.uri="/api/schedules", .method=HTTP_POST, .handler=schedules_post},
         {.uri="/api/escalation", .method=HTTP_GET, .handler=escalation_get}, {.uri="/api/escalation", .method=HTTP_POST, .handler=escalation_post},
         {.uri="/api/wizard-state", .method=HTTP_GET, .handler=wizard_state_get}, {.uri="/api/wizard-advance", .method=HTTP_POST, .handler=wizard_advance_post},
+        {.uri="/api/rule-engine", .method=HTTP_GET, .handler=rule_engine_get}, {.uri="/api/escalation/ack", .method=HTTP_POST, .handler=escalation_ack_post},
     };
     for (size_t i = 0; i < sizeof(uris)/sizeof(uris[0]); i++) httpd_register_uri_handler(s_server, &uris[i]);
     ESP_LOGI(TAG, "HTTP server started on :80 with Basic Auth + salted SHA-256");

@@ -157,6 +157,18 @@ idf.py -p /dev/ttyUSB0 flash monitor
 
 Pliki `sdkconfig.defaults`, `CMakeLists.txt`, `main/` oraz `components/` są już obecne w projekcie, więc repozytorium ma podstawową strukturę zgodną z ESP-IDF. [cite:1]
 
+### Budowanie i wgrywanie przez Docker (bez lokalnego ESP-IDF)
+
+Projekt można też zbudować i wgrać przy użyciu kontenera z ESP-IDF 5.x,
+bez instalowania toolchaina na hoście:
+
+```bash
+docker compose run --rm build                              # kompilacja, dziala wszedzie
+docker compose --profile hardware run --rm flash-monitor    # wgranie + podglad portu (wymaga plytki)
+```
+
+Szczegóły, ograniczenia na macOS/Windows i wszystkie dostępne komendy opisane są w [`DOCKER.md`](./DOCKER.md).
+
 ## Konfiguracja po pierwszym uruchomieniu
 
 Zalecana kolejność:

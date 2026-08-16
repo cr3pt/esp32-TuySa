@@ -1,0 +1,70 @@
+# Budowanie i wgrywanie firmware ESP32-TuySa w kontenerze (ESP-IDF 5.x),
+# bez instalowania toolchaina lokalnie.
+#
+# Budowanie (dziala wszedzie, nie wymaga podlaczonej plytki):
+#   docker compose run --rm build
+#
+# Konfiguracja (menuconfig, interaktywne):
+#   docker compose run --rm menuconfig
+#
+# Wgranie na plytke i podglad portu szeregowego (wymaga podlaczonego ESP32
+# i profilu "hardware" - patrz DOCKER.md w sprawie ESP32_PORT i ograniczen
+# na macOS/Windows):
+#   docker compose --profile hardware run --rm flash
+#   docker compose --profile hardware run --rm monitor
+#   docker compose --profile hardware run --rm flash-monitor
+#   docker compose --profile hardware run --rm shell
+
+x-idf-common: &idf-common
+  build: .
+  image: esp32-tuysa-idf:latest
+  volumes:
+    - .:/project
+  working_dir: /project
+
+x-idf-hardware: &idf-hardware
+  <<: *idf-common
+  devices:
+    - "${ESP32_PORT:-/dev/ttyUSB0}:${ESP32_PORT:-/dev/ttyUSB0}"
+  profiles: ["hardware"]
+
+services:
+  # Sama kompilacja - bezpieczna wszedzie (CI, chmura, brak podlaczonej plytki).
+  # Uzywa osobnego katalogu build-docker/, zeby nie kolidowac z ewentualnym
+  # lokalnym katalogu build/ zbudowanym poza kontenerem.
+  build:
+    <<: *idf-common
+    command: ["idf.py", "-B", "build-docker", "set-target", "esp32", "build"]
+
+  menuconfig:
+    <<: *idf-common
+    stdin_open: true
+    tty: true
+    command: ["idf.py", "-B", "build-docker", "menuconfig"]
+
+  clean:
+    <<: *idf-common
+    command: ["idf.py", "-B", "build-docker", "fullclean"]
+
+  flash:
+    <<: *idf-hardware
+    command: ["idf.py", "-B", "build-docker", "-p", "${ESP32_PORT:-/dev/ttyUSB0}", "flash"]
+
+  monitor:
+    <<: *idf-hardware
+    stdin_open: true
+    tty: true
+    command: ["idf.py", "-B", "build-docker", "-p", "${ESP32_PORT:-/dev/ttyUSB0}", "monitor"]
+
+  flash-monitor:
+    <<: *idf-hardware
+    stdin_open: true
+    tty: true
+    command: ["idf.py", "-B", "build-docker", "-p", "${ESP32_PORT:-/dev/ttyUSB0}", "flash", "monitor"]
+
+  # Interaktywna powloka z gotowym srodowiskiem ESP-IDF i dostepem do portu.
+  shell:
+    <<: *idf-hardware
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]

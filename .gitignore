@@ -1,0 +1,16 @@
+# ESP-IDF build output (wygenerowane, zalezne od maszyny - CMakeCache.txt
+# zawiera sciezki bezwzgledne, wiec nie nadaje sie do wspoldzielenia w repo)
+build/
+build-docker/
+managed_components/
+dependencies.lock
+sdkconfig
+sdkconfig.old
+
+# Docker
+.env
+
+# Edytory / OS
+.vscode/
+.idea/
+.DS_Store

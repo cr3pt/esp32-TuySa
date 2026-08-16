@@ -1,0 +1,8 @@
+.git
+build
+build-docker
+managed_components
+dependencies.lock
+*.bin
+*.elf
+*.map
