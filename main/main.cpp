@@ -3,6 +3,7 @@
 #include "tuya_client.h"
 #include "crypto_manager.h"
 #include "config_manager.h"
+#include "http_server.h"
 #include "system_services.h"
 #include "ota_manager.h"
 #include "web_tls.h"
@@ -90,33 +91,54 @@ extern "C" void app_main(void) {
     hw_watchdog_init(15);
     hw_watchdog_add_current_task();
 
+    /* Wczytaj konfiguracje zapisana przez kreator WWW; dopiero gdy jej brak, */
+    /* uzyj wartosci domyslnych. Bez tego kazdy restart kasowalby postep kreatora. */
     satel_creds_t sc = {};
-    strncpy(sc.host, "192.168.1.100", sizeof(sc.host)-1);
-    sc.port = 7094;
-    strncpy(sc.password, "1234", sizeof(sc.password)-1);
-    crypto_save_satel_creds(&sc, sizeof(sc));
+    if (crypto_load_satel_creds(&sc, sizeof(sc)) != ESP_OK) {
+        strncpy(sc.host, "192.168.1.100", sizeof(sc.host)-1);
+        sc.port = 7094;
+        strncpy(sc.password, "1234", sizeof(sc.password)-1);
+        crypto_save_satel_creds(&sc, sizeof(sc));
+    }
 
     tuya_creds_t tc = {};
-    strncpy(tc.region, "eu", sizeof(tc.region)-1);
-    strncpy(tc.client_id, "CLIENT_ID_HERE", sizeof(tc.client_id)-1);
-    strncpy(tc.client_secret, "CLIENT_SECRET_HERE", sizeof(tc.client_secret)-1);
-    strncpy(tc.user_uid, "USER_UID_HERE", sizeof(tc.user_uid)-1);
-    crypto_save_tuya_creds(&tc, sizeof(tc));
+    if (crypto_load_tuya_creds(&tc, sizeof(tc)) != ESP_OK) {
+        strncpy(tc.region, "eu", sizeof(tc.region)-1);
+        strncpy(tc.client_id, "CLIENT_ID_HERE", sizeof(tc.client_id)-1);
+        strncpy(tc.client_secret, "CLIENT_SECRET_HERE", sizeof(tc.client_secret)-1);
+        strncpy(tc.user_uid, "USER_UID_HERE", sizeof(tc.user_uid)-1);
+        crypto_save_tuya_creds(&tc, sizeof(tc));
+    }
 
     net_config_t nc = {};
-    strncpy(nc.hostname, "esp32-bridge", sizeof(nc.hostname)-1);
-    strncpy(nc.ntp_server, "pool.ntp.org", sizeof(nc.ntp_server)-1);
-    config_manager_save_net(&nc);
+    if (config_manager_load_net(&nc) != ESP_OK) {
+        strncpy(nc.hostname, "esp32-bridge", sizeof(nc.hostname)-1);
+        strncpy(nc.ntp_server, "pool.ntp.org", sizeof(nc.ntp_server)-1);
+        config_manager_save_net(&nc);
+    }
 
     system_services_init(nc.hostname, nc.ntp_server);
     system_services_start();
-    mdns_wrapper_init("esp32-bridge");
+    mdns_wrapper_init(nc.hostname);
     web_tls_init("esp32-bridge.local");
     ota_manager_init();
-    char broker[128]; snprintf(broker, sizeof(broker), "mqtt://192.168.1.10"); mqtt_bridge_init(broker, "esp32/bridge");
+
+    mqtt_config_t mc = {};
+    if (config_manager_load_mqtt(&mc) != ESP_OK) {
+        snprintf(mc.broker, sizeof(mc.broker), "mqtt://192.168.1.10");
+        snprintf(mc.base_topic, sizeof(mc.base_topic), "esp32/bridge");
+        config_manager_save_mqtt(&mc);
+    }
+    mqtt_bridge_init(mc.broker, mc.base_topic);
     mqtt_bridge_start();
     mqtt_bridge_publish_ha_discovery();
-    webhook_client_init("http://192.168.1.20:8080");
+
+    webhook_config_t wc = {};
+    if (config_manager_load_webhook(&wc) != ESP_OK) {
+        snprintf(wc.base_url, sizeof(wc.base_url), "http://192.168.1.20:8080");
+        config_manager_save_webhook(&wc);
+    }
+    webhook_client_init(wc.base_url);
 
     http_server_init("admin", "StrongPass123!");
     http_server_start();

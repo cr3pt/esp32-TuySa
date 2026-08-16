@@ -3,40 +3,522 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ESP32 Bridge Panel</title>
+<title>ESP32 Bridge – Kreator konfiguracji</title>
 <style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#0b1220;color:#e5e7eb;margin:0}
 header{padding:18px 20px;background:#111827;border-bottom:1px solid #334155}
-main{padding:20px;max-width:1200px;margin:auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.card{background:#172033;border:1px solid #334155;border-radius:12px;padding:16px}
-input,select,button{padding:10px 12px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;margin:4px 0}
-button{background:#0284c7;cursor:pointer}
+header h1{margin:0 0 4px;font-size:20px}
+header p{margin:0;color:#94a3b8;font-size:13px}
+main{padding:20px;max-width:1000px;margin:auto}
+.layout{display:flex;gap:20px;align-items:flex-start}
+.stepper{list-style:none;margin:0;padding:0;min-width:190px;flex:0 0 190px}
+.stepper li{padding:9px 10px;border-radius:8px;margin-bottom:4px;font-size:13px;color:#94a3b8;cursor:default;display:flex;align-items:center;gap:8px}
+.stepper li .dot{width:18px;height:18px;border-radius:50%;background:#1f2937;border:1px solid #475569;display:flex;align-items:center;justify-content:center;font-size:10px;flex:0 0 18px}
+.stepper li.done .dot{background:#16a34a;border-color:#16a34a;color:#fff}
+.stepper li.current{background:#172033;color:#fff;font-weight:bold}
+.stepper li.current .dot{background:#0284c7;border-color:#0284c7;color:#fff}
+.stepper li.clickable{cursor:pointer}
+.card{background:#172033;border:1px solid #334155;border-radius:12px;padding:20px;flex:1;min-width:0}
+.card h2{margin-top:0}
+.hint{color:#94a3b8;font-size:12.5px;margin:2px 0 10px}
+.info-box{background:#0f172a;border:1px solid #334155;border-left:3px solid #0284c7;border-radius:6px;padding:10px 12px;font-size:13px;color:#cbd5e1;margin-bottom:14px}
+.info-box.warn{border-left-color:#eab308}
+label{display:block;margin:10px 0 4px;font-weight:bold;font-size:13px}
+input[type=text],input[type=password],input[type=number],select{width:100%;padding:9px 10px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff}
+input[type=checkbox]{width:auto;margin-right:6px}
+.row{display:flex;gap:12px}
+.row>div{flex:1}
+.checkline{display:flex;align-items:center;font-weight:normal;margin:10px 0}
+.days{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.days label{display:flex;align-items:center;gap:4px;font-weight:normal;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:5px 8px;margin:0}
+.actions{margin-top:20px;display:flex;justify-content:space-between;gap:10px}
+button{padding:10px 18px;border-radius:8px;border:1px solid #475569;background:#0284c7;color:#fff;cursor:pointer;font-size:14px}
 button:hover{background:#0369a1}
-pre{white-space:pre-wrap;background:#0f172a;padding:10px;border-radius:8px;overflow:auto}
-label{display:block;margin:8px 0 4px;font-weight:bold}
+button.secondary{background:#1f2937}
+button.secondary:hover{background:#334155}
+button.danger{background:#7f1d1d;border-color:#991b1b}
+button.danger:hover{background:#991b1b}
+button:disabled{opacity:.5;cursor:not-allowed}
+.item-box{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:12px}
+.item-box .item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.item-box .item-head strong{font-size:13px;color:#93c5fd}
+.subrow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:6px}
+.small-btn{padding:5px 10px;font-size:12px}
+.error{background:#450a0a;border:1px solid #991b1b;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:13px}
+.summary-block{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:10px}
+.summary-block h3{margin:0 0 8px;font-size:14px;color:#93c5fd}
+pre{white-space:pre-wrap;background:#0f172a;padding:10px;border-radius:8px;overflow:auto;font-size:12px;margin:0}
+.done-screen{text-align:center;padding:30px 10px}
+.done-screen .big{font-size:40px}
 </style>
 </head>
 <body>
-<header><h1>ESP32 TUYA + SATEL Bridge</h1><p>Panel konfiguracyjny z MQTT</p></header>
+<header>
+<h1>ESP32 TUYA + SATEL Bridge</h1>
+<p>Kreator konfiguracji – każdy krok zapisuje się do configu urządzenia po kliknięciu „DALEJ”, więc konfigurację można w każdej chwili przerwać i wrócić do niej później.</p>
+</header>
 <main>
-<div class="grid">
-<section class="card"><h2>Tryb pracy</h2><select id="mode"><option>HOME</option><option>AWAY</option><option>NIGHT</option><option>MANUAL</option></select><button onclick="setMode()">Ustaw tryb</button><pre id="modeStatus"></pre></section>
-<section class="card"><h2>Konfiguracja MQTT</h2><label>Broker URL</label><input type="text" id="mqttBroker" placeholder="mqtt://192.168.1.10:1883"><label>Base Topic</label><input type="text" id="mqttTopic" placeholder="esp32/bridge"><button onclick="setMQTT()">Zapisz MQTT</button><pre id="mqttStatus"></pre></section>
-<section class="card"><h2>Rate limit</h2><pre id="rate"></pre></section>
-<section class="card"><h2>Watchdog</h2><pre id="wd"></pre></section>
-<section class="card"><h2>Zdarzenia</h2><pre id="events"></pre></section>
-<section class="card"><h2>MQTT Status</h2><pre id="mqttState"></pre></section>
-<section class="card"><h2>OTA</h2><input type="text" id="otaUrl" placeholder="https://example.com/firmware.bin"><button onclick="doOTA()">Aktualizuj</button><pre id="otaStatus"></pre></section>
+<div class="layout">
+  <ul class="stepper" id="stepper"></ul>
+  <section class="card" id="cardHost">
+    <div id="errorBox"></div>
+    <div id="stepContainer"></div>
+    <div class="actions" id="wizardActions">
+      <button class="secondary" id="backBtn" type="button">WSTECZ</button>
+      <button id="nextBtn" type="button">DALEJ</button>
+    </div>
+  </section>
 </div>
 </main>
 <script>
-async function load(id,url){try{const r=await fetch(url);document.getElementById(id).textContent=await r.text()}catch(e){document.getElementById(id).textContent="Error: "+e}}
-async function tick(){load('modeStatus','/api/mode');load('rate','/api/rate-limit');load('wd','/api/watchdog');load('events','/api/events');load('mqttState','/api/mqtt');load('otaStatus','/api/ota')}
-async function setMode(){await fetch('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:document.getElementById('mode').value})});tick()}
-async function setMQTT(){await fetch('/api/mqtt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({broker:document.getElementById('mqttBroker').value,topic:document.getElementById('mqttTopic').value})});tick()}
-async function doOTA(){const url=document.getElementById('otaUrl').value;if(!url){alert("Wymagany URL OTA");return}await fetch('/api/ota',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});tick()}
-setInterval(tick,5000);tick();
+const DAY_LABELS = ["Pn","Wt","Śr","Cz","Pt","So","Nd"];
+const MODE_LABELS = ["HOME","AWAY","NIGHT","MANUAL"];
+let scenesData = [];
+let schedulesData = [];
+let escalationData = { enabled:false, ack_timeout_sec:300, levels:[] };
+let current = 0;
+let completedMask = 0;
+
+async function apiFetch(url, method, body) {
+  const opts = { method };
+  if (body !== undefined) { opts.headers = {'Content-Type':'application/json'}; opts.body = JSON.stringify(body); }
+  const r = await fetch(url, opts);
+  if (!r.ok) { let t=''; try { t = await r.text(); } catch(e) {} throw new Error('Błąd zapisu (' + r.status + ') ' + t); }
+  try { return await r.json(); } catch(e) { return {}; }
+}
+async function apiGet(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Błąd odczytu (' + r.status + ')');
+  return r.json();
+}
+function el(id) { return document.getElementById(id); }
+function showError(msg) { el('errorBox').innerHTML = '<div class="error">' + msg + '</div>'; }
+function clearError() { el('errorBox').innerHTML = ''; }
+function setBusy(b) { el('nextBtn').disabled = b; el('backBtn').disabled = b; el('nextBtn').textContent = b ? 'Zapisywanie…' : (current === STEPS.length - 1 ? 'ZAKOŃCZ' : 'DALEJ'); }
+
+/* ---------- Krok: Sieć ---------- */
+function renderNet(c) {
+  c.innerHTML = `
+    <h2>Sieć</h2>
+    <p class="hint">Dane Wi-Fi i adresacja urządzenia.</p>
+    <label>SSID sieci Wi-Fi</label>
+    <input type="text" id="net_ssid">
+    <label>Hasło Wi-Fi</label>
+    <input type="password" id="net_password" placeholder="(pozostaw puste, aby nie zmieniać)">
+    <label>Nazwa hosta</label>
+    <input type="text" id="net_hostname" placeholder="esp32-bridge">
+    <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" id="net_dhcp" checked> DHCP (adres automatyczny)</label></div>
+    <div id="net_static" class="row">
+      <div><label>Adres IP</label><input type="text" id="net_ip" placeholder="192.168.1.50"></div>
+      <div><label>Brama</label><input type="text" id="net_gw" placeholder="192.168.1.1"></div>
+      <div><label>Maska</label><input type="text" id="net_mask" placeholder="255.255.255.0"></div>
+    </div>
+    <div class="row">
+      <div><label>DNS 1</label><input type="text" id="net_dns1" placeholder="8.8.8.8"></div>
+      <div><label>DNS 2</label><input type="text" id="net_dns2" placeholder="8.8.4.4"></div>
+    </div>
+    <label>Serwer NTP</label>
+    <input type="text" id="net_ntp" placeholder="pool.ntp.org">
+  `;
+  el('net_dhcp').onchange = () => { el('net_static').style.display = el('net_dhcp').checked ? 'none' : 'flex'; };
+}
+async function loadNet() {
+  const d = await apiGet('/api/net-config');
+  el('net_ssid').value = d.ssid || '';
+  el('net_hostname').value = d.hostname || '';
+  el('net_dhcp').checked = d.dhcp !== false;
+  el('net_static').style.display = el('net_dhcp').checked ? 'none' : 'flex';
+  el('net_ip').value = d.ip || ''; el('net_gw').value = d.gw || ''; el('net_mask').value = d.mask || '';
+  el('net_dns1').value = d.dns1 || ''; el('net_dns2').value = d.dns2 || '';
+  el('net_ntp').value = d.ntp_server || '';
+  el('net_password').placeholder = d.has_password ? '(zapisano – pozostaw puste, aby nie zmieniać)' : 'hasło Wi-Fi';
+}
+async function saveNet() {
+  await apiFetch('/api/net-config', 'POST', {
+    ssid: el('net_ssid').value, password: el('net_password').value, hostname: el('net_hostname').value,
+    dhcp: el('net_dhcp').checked, ip: el('net_ip').value, gw: el('net_gw').value, mask: el('net_mask').value,
+    dns1: el('net_dns1').value, dns2: el('net_dns2').value, ntp_server: el('net_ntp').value,
+  });
+}
+
+/* ---------- Krok: TUYA ---------- */
+function renderTuya(c) {
+  c.innerHTML = `
+    <h2>TUYA Cloud</h2>
+    <p class="hint">Dane dostępowe do konta deweloperskiego TUYA (IoT Platform).</p>
+    <label>Region</label>
+    <select id="tuya_region"><option value="eu">eu</option><option value="us">us</option><option value="cn">cn</option><option value="in">in</option></select>
+    <label>Client ID</label>
+    <input type="text" id="tuya_client_id">
+    <label>Client Secret</label>
+    <input type="password" id="tuya_client_secret" placeholder="(pozostaw puste, aby nie zmieniać)">
+    <label>User UID</label>
+    <input type="text" id="tuya_user_uid">
+  `;
+}
+async function loadTuya() {
+  const d = await apiGet('/api/tuya-config');
+  el('tuya_region').value = d.region || 'eu';
+  el('tuya_client_id').value = d.client_id || '';
+  el('tuya_user_uid').value = d.user_uid || '';
+  el('tuya_client_secret').placeholder = d.has_secret ? '(zapisano – pozostaw puste, aby nie zmieniać)' : 'client secret';
+}
+async function saveTuya() {
+  await apiFetch('/api/tuya-config', 'POST', {
+    region: el('tuya_region').value, client_id: el('tuya_client_id').value,
+    client_secret: el('tuya_client_secret').value, user_uid: el('tuya_user_uid').value,
+  });
+}
+
+/* ---------- Krok: SATEL ---------- */
+function renderSatel(c) {
+  c.innerHTML = `
+    <h2>SATEL INTEGRA (ETHM-1 PLUS)</h2>
+    <p class="hint">Adres modułu ETHM-1 PLUS oraz kod użytkownika/operatora.</p>
+    <div class="info-box warn"><strong>Szyfrowanie:</strong> obecna integracja komunikuje się z modułem ETHM-1 PLUS zwykłym, nieszyfrowanym TCP – przesyłany jest jedynie 8-bajtowy kod użytkownika dołączany do komend uprzywilejowanych, a nie pełne szyfrowanie ramek kluczem AES. Jeżeli w module/centrali włączona jest opcja „szyfrowanie danych” (klucz integracyjny), połączenie nie zestawi się – trzeba ją wyłączyć po stronie ETHM-1 PLUS albo poczekać na wsparcie AES w tym komponencie.</div>
+    <label>Adres IP / host modułu ETHM-1 PLUS</label>
+    <input type="text" id="satel_host" placeholder="192.168.1.100">
+    <label>Port (domyślnie 7094)</label>
+    <input type="number" id="satel_port" placeholder="7094">
+    <label>Kod użytkownika/operatora</label>
+    <input type="password" id="satel_password" placeholder="(pozostaw puste, aby nie zmieniać)">
+    <label>Identyfikator panelu (opcjonalnie)</label>
+    <input type="text" id="satel_panel_id">
+  `;
+}
+async function loadSatel() {
+  const d = await apiGet('/api/satel-config');
+  el('satel_host').value = d.host || '';
+  el('satel_port').value = d.port || 7094;
+  el('satel_panel_id').value = d.panel_id || '';
+  el('satel_password').placeholder = d.has_password ? '(zapisano – pozostaw puste, aby nie zmieniać)' : 'kod użytkownika';
+}
+async function saveSatel() {
+  await apiFetch('/api/satel-config', 'POST', {
+    host: el('satel_host').value, port: parseInt(el('satel_port').value || '7094', 10),
+    password: el('satel_password').value, panel_id: el('satel_panel_id').value,
+  });
+}
+
+/* ---------- Krok: Panel WWW ---------- */
+function renderPanel(c) {
+  c.innerHTML = `
+    <h2>Panel WWW</h2>
+    <p class="hint">Dane logowania do tego panelu (Basic Auth). Aktualny użytkownik: <strong id="panel_current">…</strong></p>
+    <div class="info-box">Zmiana danych logowania spowoduje, że przeglądarka poprosi o ponowne zalogowanie nowymi danymi – strona odświeży się automatycznie po zapisaniu.</div>
+    <label>Nowa nazwa użytkownika</label>
+    <input type="text" id="panel_username" placeholder="(pozostaw puste, aby nie zmieniać)">
+    <label>Nowe hasło (min. 8 znaków)</label>
+    <input type="password" id="panel_password" placeholder="(pozostaw puste, aby nie zmieniać)">
+  `;
+}
+async function loadPanel() {
+  try { const d = await apiGet('/api/status'); el('panel_current').textContent = d.username || 'admin'; }
+  catch(e) { el('panel_current').textContent = '?'; }
+}
+async function savePanel() {
+  const u = el('panel_username').value.trim(), p = el('panel_password').value;
+  if (!u && !p) return; /* nic do zmiany */
+  if (!u || !p) throw new Error('Aby zmienić dane logowania, podaj i nazwę użytkownika, i nowe hasło.');
+  if (u.length < 3 || p.length < 8) throw new Error('Nazwa użytkownika min. 3 znaki, hasło min. 8 znaków.');
+  await advance(current);
+  await apiFetch('/api/auth', 'POST', { username: u, password: p });
+  el('stepContainer').innerHTML = '<div class="done-screen"><div class="big">🔒</div><h2>Dane logowania zmienione</h2><p>Za chwilę strona odświeży się i poprosi o zalogowanie nowymi danymi, aby kontynuować kreator.</p></div>';
+  el('wizardActions').style.display = 'none';
+  setTimeout(() => location.reload(), 2500);
+  return { customFlow: true };
+}
+
+/* ---------- Krok: MQTT ---------- */
+function renderMqtt(c) {
+  c.innerHTML = `
+    <h2>MQTT</h2>
+    <p class="hint">Broker, do którego urządzenie publikuje statusy i zdarzenia (m.in. Home Assistant Discovery).</p>
+    <label>Broker URL</label>
+    <input type="text" id="mqtt_broker" placeholder="mqtt://192.168.1.10:1883">
+    <label>Base Topic</label>
+    <input type="text" id="mqtt_topic" placeholder="esp32/bridge">
+  `;
+}
+async function loadMqtt() {
+  const d = await apiGet('/api/mqtt');
+  el('mqtt_broker').value = d.broker || '';
+  el('mqtt_topic').value = d.base_topic || '';
+}
+async function saveMqtt() {
+  const b = el('mqtt_broker').value, t = el('mqtt_topic').value;
+  if (b.length < 5 || t.length < 3) throw new Error('Podaj poprawny adres brokera i temat bazowy (min. 3 znaki).');
+  await apiFetch('/api/mqtt', 'POST', { broker: b, topic: t });
+}
+
+/* ---------- Krok: Webhook ---------- */
+function renderWebhook(c) {
+  c.innerHTML = `
+    <h2>Webhook</h2>
+    <p class="hint">Adres bazowy, na który urządzenie wysyła powiadomienia HTTP POST o zdarzeniach.</p>
+    <label>Adres bazowy</label>
+    <input type="text" id="webhook_url" placeholder="http://192.168.1.20:8080">
+  `;
+}
+async function loadWebhook() {
+  const d = await apiGet('/api/webhook-config');
+  el('webhook_url').value = d.base_url || '';
+}
+async function saveWebhook() {
+  await apiFetch('/api/webhook-config', 'POST', { base_url: el('webhook_url').value });
+}
+
+/* ---------- Krok: Tryby pracy ---------- */
+function renderModes(c) {
+  c.innerHTML = `
+    <h2>Tryby pracy</h2>
+    <p class="hint">Bieżący tryb automatyki (wpływa na reguły czasowe, np. nocne wyłączanie światła).</p>
+    <label>Tryb</label>
+    <select id="mode_select"><option value="HOME">HOME</option><option value="AWAY">AWAY</option><option value="NIGHT">NIGHT</option><option value="MANUAL">MANUAL</option></select>
+  `;
+}
+async function loadModes() {
+  try { const d = await apiGet('/api/mode'); el('mode_select').value = MODE_LABELS[d.mode] || 'HOME'; } catch(e) {}
+}
+async function saveModes() {
+  await apiFetch('/api/mode', 'POST', { mode: el('mode_select').value });
+}
+
+/* ---------- Krok: Sceny ---------- */
+const ACTION_CODES = [
+  ['tuya_bool', 'TUYA – ustaw wartość bool (target=dev_id, param=kod DP, value=true/false)'],
+  ['tuya_int', 'TUYA – ustaw wartość liczbową (target=dev_id, param=kod DP, value=liczba)'],
+  ['satel_output_on', 'SATEL – załącz wyjście (target=nr wyjścia)'],
+  ['satel_output_off', 'SATEL – wyłącz wyjście (target=nr wyjścia)'],
+  ['satel_arm', 'SATEL – uzbrój partycję (target=nr partycji, param=tryb 0-3)'],
+  ['satel_disarm', 'SATEL – rozbrój partycję (target=nr partycji)'],
+];
+function renderScenes(c) {
+  c.innerHTML = `
+    <h2>Sceny</h2>
+    <p class="hint">Grupy akcji TUYA/SATEL wywoływane razem, np. z harmonogramu albo eskalacji. Maks. ${8} scen, po ${4} akcje.</p>
+    <div id="scenes_list"></div>
+    <button class="secondary small-btn" type="button" id="scene_add">+ Dodaj scenę</button>
+  `;
+  el('scene_add').onclick = () => { if (scenesData.length < 8) { scenesData.push({ name: '', enabled: true, actions: [] }); renderScenesList(); } };
+  renderScenesList();
+}
+function renderScenesList() {
+  const box = el('scenes_list'); if (!box) return;
+  box.innerHTML = scenesData.map((s, i) => `
+    <div class="item-box">
+      <div class="item-head"><strong>Scena ${i+1}</strong><button class="danger small-btn" type="button" data-del-scene="${i}">Usuń</button></div>
+      <label>Nazwa</label><input type="text" data-scene-name="${i}" value="${escAttr(s.name)}" placeholder="np. Wyjście z domu">
+      <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" data-scene-enabled="${i}" ${s.enabled ? 'checked' : ''}> Aktywna</label></div>
+      <div id="scene_actions_${i}"></div>
+      <button class="secondary small-btn" type="button" data-scene-addact="${i}">+ Dodaj akcję</button>
+    </div>
+  `).join('') || '<p class="hint">Brak scen – kliknij „Dodaj scenę”.</p>';
+  scenesData.forEach((s, i) => {
+    const ab = el('scene_actions_' + i); if (!ab) return;
+    ab.innerHTML = s.actions.map((a, j) => `
+      <div class="subrow">
+        <select data-act-code="${i}:${j}">${ACTION_CODES.map(([v,l]) => `<option value="${v}" title="${escAttr(l)}" ${a.code===v?'selected':''}>${v}</option>`).join('')}</select>
+        <input type="text" data-act-target="${i}:${j}" value="${escAttr(a.target)}" placeholder="target">
+        <input type="text" data-act-param="${i}:${j}" value="${escAttr(a.param)}" placeholder="param">
+        <input type="text" data-act-value="${i}:${j}" value="${escAttr(a.value)}" placeholder="value">
+      </div>
+    `).join('');
+  });
+  box.querySelectorAll('[data-del-scene]').forEach(b => b.onclick = () => { scenesData.splice(+b.dataset.delScene, 1); renderScenesList(); });
+  box.querySelectorAll('[data-scene-addact]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.sceneAddact;
+    if (scenesData[i].actions.length < 4) { scenesData[i].actions.push({ code:'tuya_bool', target:'', param:'', value:'' }); renderScenesList(); }
+  });
+  box.querySelectorAll('[data-scene-name]').forEach(inp => inp.oninput = () => scenesData[+inp.dataset.sceneName].name = inp.value);
+  box.querySelectorAll('[data-scene-enabled]').forEach(inp => inp.onchange = () => scenesData[+inp.dataset.sceneEnabled].enabled = inp.checked);
+  box.querySelectorAll('[data-act-code]').forEach(inp => inp.onchange = () => { const [i,j]=inp.dataset.actCode.split(':').map(Number); scenesData[i].actions[j].code = inp.value; });
+  box.querySelectorAll('[data-act-target]').forEach(inp => inp.oninput = () => { const [i,j]=inp.dataset.actTarget.split(':').map(Number); scenesData[i].actions[j].target = inp.value; });
+  box.querySelectorAll('[data-act-param]').forEach(inp => inp.oninput = () => { const [i,j]=inp.dataset.actParam.split(':').map(Number); scenesData[i].actions[j].param = inp.value; });
+  box.querySelectorAll('[data-act-value]').forEach(inp => inp.oninput = () => { const [i,j]=inp.dataset.actValue.split(':').map(Number); scenesData[i].actions[j].value = inp.value; });
+}
+async function loadScenes() { scenesData = await apiGet('/api/scenes'); if (!Array.isArray(scenesData)) scenesData = []; renderScenesList(); }
+async function saveScenes() { await apiFetch('/api/scenes', 'POST', { scenes: scenesData }); }
+
+/* ---------- Krok: Harmonogramy ---------- */
+function renderSchedules(c) {
+  c.innerHTML = `
+    <h2>Harmonogramy</h2>
+    <p class="hint">Wyzwalanie sceny i/lub trybu pracy o określonej porze i dniach tygodnia. Maks. ${8}.</p>
+    <div id="sched_list"></div>
+    <button class="secondary small-btn" type="button" id="sched_add">+ Dodaj harmonogram</button>
+  `;
+  el('sched_add').onclick = () => { if (schedulesData.length < 8) { schedulesData.push({ name:'', enabled:true, days_mask:0, hour:22, minute:0, scene_name:'', set_mode:false, target_mode:0 }); renderSchedList(); } };
+  renderSchedList();
+}
+function renderSchedList() {
+  const box = el('sched_list'); if (!box) return;
+  const sceneOptions = (sel) => '<option value="">(brak)</option>' + scenesData.map(s => `<option value="${escAttr(s.name)}" ${s.name===sel?'selected':''}>${escAttr(s.name)}</option>`).join('');
+  box.innerHTML = schedulesData.map((s, i) => `
+    <div class="item-box">
+      <div class="item-head"><strong>Harmonogram ${i+1}</strong><button class="danger small-btn" type="button" data-del-sched="${i}">Usuń</button></div>
+      <label>Nazwa</label><input type="text" data-sc-name="${i}" value="${escAttr(s.name)}" placeholder="np. Uzbrojenie na noc">
+      <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" data-sc-enabled="${i}" ${s.enabled?'checked':''}> Aktywny</label></div>
+      <label>Dni tygodnia</label>
+      <div class="days">${DAY_LABELS.map((d,bit) => `<label><input type="checkbox" data-sc-day="${i}:${bit}" ${(s.days_mask>>bit)&1?'checked':''}> ${d}</label>`).join('')}</div>
+      <div class="row">
+        <div><label>Godzina</label><input type="number" min="0" max="23" data-sc-hour="${i}" value="${s.hour}"></div>
+        <div><label>Minuta</label><input type="number" min="0" max="59" data-sc-min="${i}" value="${s.minute}"></div>
+      </div>
+      <label>Scena do wywołania</label>
+      <select data-sc-scene="${i}">${sceneOptions(s.scene_name)}</select>
+      <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" data-sc-setmode="${i}" ${s.set_mode?'checked':''}> Ustaw też tryb pracy:</label>
+        <select data-sc-mode="${i}" style="margin-left:10px">${MODE_LABELS.map((m,v)=>`<option value="${v}" ${s.target_mode==v?'selected':''}>${m}</option>`).join('')}</select>
+      </div>
+    </div>
+  `).join('') || '<p class="hint">Brak harmonogramów – kliknij „Dodaj harmonogram”.</p>';
+  box.querySelectorAll('[data-del-sched]').forEach(b => b.onclick = () => { schedulesData.splice(+b.dataset.delSched, 1); renderSchedList(); });
+  box.querySelectorAll('[data-sc-name]').forEach(i => i.oninput = () => schedulesData[+i.dataset.scName].name = i.value);
+  box.querySelectorAll('[data-sc-enabled]').forEach(i => i.onchange = () => schedulesData[+i.dataset.scEnabled].enabled = i.checked);
+  box.querySelectorAll('[data-sc-day]').forEach(i => i.onchange = () => {
+    const [idx,bit] = i.dataset.scDay.split(':').map(Number);
+    if (i.checked) schedulesData[idx].days_mask |= (1<<bit); else schedulesData[idx].days_mask &= ~(1<<bit);
+  });
+  box.querySelectorAll('[data-sc-hour]').forEach(i => i.oninput = () => schedulesData[+i.dataset.scHour].hour = parseInt(i.value||'0',10));
+  box.querySelectorAll('[data-sc-min]').forEach(i => i.oninput = () => schedulesData[+i.dataset.scMin].minute = parseInt(i.value||'0',10));
+  box.querySelectorAll('[data-sc-scene]').forEach(i => i.onchange = () => schedulesData[+i.dataset.scScene].scene_name = i.value);
+  box.querySelectorAll('[data-sc-setmode]').forEach(i => i.onchange = () => schedulesData[+i.dataset.scSetmode].set_mode = i.checked);
+  box.querySelectorAll('[data-sc-mode]').forEach(i => i.onchange = () => schedulesData[+i.dataset.scMode].target_mode = parseInt(i.value,10));
+}
+async function loadSchedules() { schedulesData = await apiGet('/api/schedules'); if (!Array.isArray(schedulesData)) schedulesData = []; renderSchedList(); }
+async function saveSchedules() { await apiFetch('/api/schedules', 'POST', { schedules: schedulesData }); }
+
+/* ---------- Krok: Eskalacja ---------- */
+function renderEscalation(c) {
+  c.innerHTML = `
+    <h2>Eskalacja</h2>
+    <p class="hint">Jeśli alarm nie zostanie potwierdzony w zadanym czasie, kolejne poziomy eskalacji wysyłają powiadomienia (webhook/MQTT) w narastających odstępach.</p>
+    <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" id="esc_enabled"> Włącz eskalację</label></div>
+    <label>Czas na potwierdzenie alarmu (sekundy)</label>
+    <input type="number" id="esc_ack" min="0">
+    <div id="esc_levels"></div>
+    <button class="secondary small-btn" type="button" id="esc_add">+ Dodaj poziom</button>
+  `;
+  el('esc_add').onclick = () => { if (escalationData.levels.length < 4) { escalationData.levels.push({ after_sec:60, via_webhook:true, via_mqtt:false, note:'' }); renderEscLevels(); } };
+}
+function renderEscLevels() {
+  const box = el('esc_levels'); if (!box) return;
+  box.innerHTML = escalationData.levels.map((lv, i) => `
+    <div class="item-box">
+      <div class="item-head"><strong>Poziom ${i+1}</strong><button class="danger small-btn" type="button" data-del-lvl="${i}">Usuń</button></div>
+      <label>Opóźnienie od wyzwolenia / poprzedniego poziomu (s)</label>
+      <input type="number" min="0" data-lvl-after="${i}" value="${lv.after_sec}">
+      <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" data-lvl-webhook="${i}" ${lv.via_webhook?'checked':''}> Wyślij webhook</label></div>
+      <div class="checkline"><label style="display:flex;align-items:center;font-weight:normal;margin:0"><input type="checkbox" data-lvl-mqtt="${i}" ${lv.via_mqtt?'checked':''}> Publikuj do MQTT</label></div>
+      <label>Notatka / odbiorca (opcjonalnie)</label>
+      <input type="text" data-lvl-note="${i}" value="${escAttr(lv.note)}" placeholder="np. SMS: +48600000000">
+    </div>
+  `).join('') || '<p class="hint">Brak poziomów eskalacji – kliknij „Dodaj poziom”.</p>';
+  box.querySelectorAll('[data-del-lvl]').forEach(b => b.onclick = () => { escalationData.levels.splice(+b.dataset.delLvl, 1); renderEscLevels(); });
+  box.querySelectorAll('[data-lvl-after]').forEach(i => i.oninput = () => escalationData.levels[+i.dataset.lvlAfter].after_sec = parseInt(i.value||'0',10));
+  box.querySelectorAll('[data-lvl-webhook]').forEach(i => i.onchange = () => escalationData.levels[+i.dataset.lvlWebhook].via_webhook = i.checked);
+  box.querySelectorAll('[data-lvl-mqtt]').forEach(i => i.onchange = () => escalationData.levels[+i.dataset.lvlMqtt].via_mqtt = i.checked);
+  box.querySelectorAll('[data-lvl-note]').forEach(i => i.oninput = () => escalationData.levels[+i.dataset.lvlNote].note = i.value);
+}
+async function loadEscalation() {
+  const d = await apiGet('/api/escalation');
+  escalationData = { enabled: !!d.enabled, ack_timeout_sec: d.ack_timeout_sec || 300, levels: Array.isArray(d.levels) ? d.levels : [] };
+  el('esc_enabled').checked = escalationData.enabled;
+  el('esc_ack').value = escalationData.ack_timeout_sec;
+  renderEscLevels();
+}
+async function saveEscalation() {
+  escalationData.enabled = el('esc_enabled').checked;
+  escalationData.ack_timeout_sec = parseInt(el('esc_ack').value || '300', 10);
+  await apiFetch('/api/escalation', 'POST', escalationData);
+}
+
+/* ---------- Krok: Podsumowanie ---------- */
+function renderSummary(c) {
+  c.innerHTML = `
+    <h2>Podsumowanie</h2>
+    <p class="hint">Wszystkie kroki zostały zapisane w konfiguracji urządzenia w trakcie kreatora. Kliknij „ZAKOŃCZ”, aby zamknąć kreator.</p>
+    <div class="summary-block"><h3>Sceny</h3><pre>${scenesData.length ? scenesData.map(s=>'• '+s.name+' ('+s.actions.length+' akcji)'+(s.enabled?'':' [wyłączona]')).join('\n') : 'brak'}</pre></div>
+    <div class="summary-block"><h3>Harmonogramy</h3><pre>${schedulesData.length ? schedulesData.map(s=>'• '+s.name+' – '+String(s.hour).padStart(2,'0')+':'+String(s.minute).padStart(2,'0')+(s.enabled?'':' [wyłączony]')).join('\n') : 'brak'}</pre></div>
+    <div class="summary-block"><h3>Eskalacja</h3><pre>${escalationData.enabled ? 'włączona, potwierdzenie w ' + escalationData.ack_timeout_sec + ' s, poziomów: ' + escalationData.levels.length : 'wyłączona'}</pre></div>
+  `;
+}
+
+function escAttr(s) { return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+const STEPS = [
+  { key:'net', title:'Sieć', render:renderNet, load:loadNet, save:saveNet },
+  { key:'tuya', title:'TUYA', render:renderTuya, load:loadTuya, save:saveTuya },
+  { key:'satel', title:'SATEL', render:renderSatel, load:loadSatel, save:saveSatel },
+  { key:'panel', title:'Panel WWW', render:renderPanel, load:loadPanel, save:savePanel },
+  { key:'mqtt', title:'MQTT', render:renderMqtt, load:loadMqtt, save:saveMqtt },
+  { key:'webhook', title:'Webhook', render:renderWebhook, load:loadWebhook, save:saveWebhook },
+  { key:'modes', title:'Tryby pracy', render:renderModes, load:loadModes, save:saveModes },
+  { key:'scenes', title:'Sceny', render:renderScenes, load:loadScenes, save:saveScenes },
+  { key:'schedules', title:'Harmonogramy', render:renderSchedules, load:loadSchedules, save:saveSchedules },
+  { key:'escalation', title:'Eskalacja', render:renderEscalation, load:loadEscalation, save:saveEscalation },
+  { key:'summary', title:'Podsumowanie', render:renderSummary, load:async()=>{}, save:async()=>{ await advance(current); await apiFetch('/api/wizard-advance','POST',{step:current,finished:true}); return {customFlow:true, done:true}; } },
+];
+
+async function advance(stepIndex) { await apiFetch('/api/wizard-advance', 'POST', { step: stepIndex }); completedMask |= (1 << stepIndex); renderStepper(); }
+
+function renderStepper() {
+  el('stepper').innerHTML = STEPS.map((s, i) => {
+    const done = (completedMask >> i) & 1;
+    const cls = ['clickable']; if (i === current) cls.push('current'); if (done) cls.push('done');
+    return `<li class="${cls.join(' ')}" data-goto="${i}"><span class="dot">${done ? '✓' : (i+1)}</span>${s.title}</li>`;
+  }).join('');
+  el('stepper').querySelectorAll('[data-goto]').forEach(li => li.onclick = () => {
+    const i = +li.dataset.goto;
+    if (i === current) return;
+    if (i < current || ((completedMask >> (i-1)) & 1) || i === 0) goTo(i);
+  });
+}
+
+async function goTo(i) {
+  current = i;
+  clearError();
+  el('wizardActions').style.display = 'flex';
+  el('backBtn').style.display = i === 0 ? 'none' : 'inline-block';
+  el('nextBtn').textContent = i === STEPS.length - 1 ? 'ZAKOŃCZ' : 'DALEJ';
+  renderStepper();
+  const container = el('stepContainer');
+  STEPS[i].render(container);
+  try { await STEPS[i].load(); } catch (e) { showError('Nie udało się wczytać danych kroku: ' + e.message); }
+}
+
+function showDone() {
+  el('stepContainer').innerHTML = '<div class="done-screen"><div class="big">✅</div><h2>Konfiguracja zakończona</h2><p>Wszystkie kroki kreatora zostały zapisane w urządzeniu.</p></div>';
+  el('wizardActions').style.display = 'none';
+}
+
+el('backBtn').onclick = () => { if (current > 0) goTo(current - 1); };
+el('nextBtn').onclick = async () => {
+  setBusy(true); clearError();
+  try {
+    const result = await STEPS[current].save();
+    if (result && result.customFlow) { if (result.done) showDone(); setBusy(false); return; }
+    await advance(current);
+    if (current === STEPS.length - 1) showDone(); else await goTo(current + 1);
+  } catch (e) {
+    showError(e.message || String(e));
+  } finally { setBusy(false); }
+};
+
+(async function init() {
+  try {
+    const st = await apiGet('/api/wizard-state');
+    completedMask = st.completed || 0;
+    let startStep = typeof st.step === 'number' ? st.step : 0;
+    if (startStep >= STEPS.length) startStep = STEPS.length - 1;
+    if (startStep < 0) startStep = 0;
+    await goTo(startStep);
+  } catch (e) {
+    await goTo(0);
+  }
+})();
 </script>
 </body>
 </html>
