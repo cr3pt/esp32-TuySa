@@ -30,7 +30,9 @@ Projekt przewiduje konfigurację sieci i usług urządzenia, w tym:
 - dane dostępowe do SATEL,
 - dane logowania do panelu WWW. [cite:1]
 
-Konfiguracja jest przechowywana lokalnie w NVS przez `config_manager`, a dane krytyczne mogą być dodatkowo zabezpieczane przez `crypto_manager`. Panel WWW został przygotowany jako frontend w `spiffs_data/index.html`, a serwer API działa przez komponent `http_server`. [cite:1]
+Konfiguracja jest przechowywana lokalnie w NVS przez `config_manager`, a dane krytyczne mogą być dodatkowo zabezpieczane przez `crypto_manager`. Panel WWW został przygotowany jako **kreator konfiguracji** w `spiffs_data/index.html` – kolejne etapy (sieć, TUYA, SATEL, panel WWW, MQTT, webhook, tryby pracy, sceny, harmonogramy, eskalacja, podsumowanie) klika się przyciskiem „DALEJ”, a każdy krok jest od razu zapisywany do NVS, więc konfigurację można przerwać i wznowić później od zapisanego miejsca. Serwer API działa przez komponent `http_server`. [cite:1]
+
+Sceny, harmonogramy i eskalacja to osobne struktury w `config_manager` (`scenes_config_t`, `schedules_config_t`, `escalation_config_t`), edytowalne przez endpointy `/api/scenes`, `/api/schedules`, `/api/escalation`. Same w sobie definiują tylko dane konfiguracyjne – ich faktyczne wykonywanie (wywoływanie scen z harmonogramu, wysyłka kolejnych poziomów eskalacji) należy dopiąć w `rule_engine`/`main.cpp`, tak jak dziś zrobiono to dla reguły nocnej w `main.cpp`. [cite:1]
 
 ### 2. Integracja TUYA
 
@@ -121,6 +123,15 @@ Projekt zawiera następujące endpointy API:
 | `/api/mqtt` | GET | Status integracji MQTT [cite:1] |
 | `/api/webhook` | GET | Status klienta webhook [cite:1] |
 | `/api/auth` | POST | Zmiana danych logowania panelu [cite:1] |
+| `/api/net-config` | GET/POST | Krok kreatora: sieć/Wi-Fi/NTP [cite:1] |
+| `/api/tuya-config` | GET/POST | Krok kreatora: dane TUYA Cloud [cite:1] |
+| `/api/satel-config` | GET/POST | Krok kreatora: host/port/kod SATEL [cite:1] |
+| `/api/webhook-config` | GET/POST | Krok kreatora: adres bazowy webhooka [cite:1] |
+| `/api/scenes` | GET/POST | Krok kreatora: sceny (grupy akcji TUYA/SATEL) [cite:1] |
+| `/api/schedules` | GET/POST | Krok kreatora: harmonogramy wywołujące sceny/tryby [cite:1] |
+| `/api/escalation` | GET/POST | Krok kreatora: poziomy eskalacji alarmu [cite:1] |
+| `/api/wizard-state` | GET | Zapisany postęp kreatora (do wznowienia) [cite:1] |
+| `/api/wizard-advance` | POST | Oznaczenie kroku kreatora jako zapisanego [cite:1] |
 
 ## Wymagania
 
